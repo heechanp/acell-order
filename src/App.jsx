@@ -6,96 +6,96 @@ const SUPABASE_URL = "https://srbpphccmhbnugcqwcrn.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_OzQ8qeUqYKQWSfZpUz8xEA_kriALOja";
 
 const products = [
-  { id: 1, category: "오이류", name: "청오이", price: 15000, unit: "판" },
-  { id: 2, category: "오이류", name: "가시오이", price: 15000, unit: "판" },
-  { id: 3, category: "오이류", name: "조선오이", price: 15000, unit: "판" },
-  { id: 4, category: "오이류", name: "노각오이", price: 15000, unit: "판" },
-  { id: 5, category: "오이류", name: "미니오이", price: 15000, unit: "판" },
+  { id: 1, category: "오이류", name: "청오이", price: 10000, unit: "판" },
+  { id: 2, category: "오이류", name: "가시오이", price: 10000, unit: "판" },
+  { id: 3, category: "오이류", name: "조선오이", price: 10000, unit: "판" },
+  { id: 4, category: "오이류", name: "노각오이", price: 10000, unit: "판" },
+  { id: 5, category: "오이류", name: "미니오이", price: 10000, unit: "판" },
 
-  { id: 10, category: "박류", name: "고지박", price: 15000, unit: "판" },
-  { id: 11, category: "박류", name: "장고지박", price: 15000, unit: "판" },
-  { id: 12, category: "박류", name: "수세미", price: 15000, unit: "판" },
+  { id: 10, category: "박류", name: "고지박", price: 10000, unit: "판" },
+  { id: 11, category: "박류", name: "장고지박", price: 10000, unit: "판" },
+  { id: 12, category: "박류", name: "수세미", price: 10000, unit: "판" },
 
-  { id: 20, category: "호박류", name: "애호박", price: 15000, unit: "판" },
-  { id: 21, category: "호박류", name: "풋호박", price: 15000, unit: "판" },
-  { id: 22, category: "호박류", name: "쥬키니", price: 15000, unit: "판" },
+  { id: 20, category: "호박류", name: "애호박", price: 10000, unit: "판" },
+  { id: 21, category: "호박류", name: "풋호박", price: 10000, unit: "판" },
+  { id: 22, category: "호박류", name: "쥬키니", price: 10000, unit: "판" },
   { id: 23, category: "호박류", name: "단호박", price: 15000, unit: "판" },
-  { id: 24, category: "호박류", name: "미니단호박", price: 15000, unit: "판" },
-  { id: 25, category: "호박류", name: "맷돌호박", price: 15000, unit: "판" },
-  { id: 26, category: "호박류", name: "조선호박", price: 15000, unit: "판" },
+  { id: 24, category: "호박류", name: "미니단호박", price: 25000, unit: "판" },
+  { id: 25, category: "호박류", name: "맷돌호박", price: 10000, unit: "판" },
+  { id: 26, category: "호박류", name: "조선호박", price: 10000, unit: "판" },
 
-  { id: 30, category: "고추류", name: "칼탄(조생강탄, 건고추)", price: 14000, unit: "판" },
-  { id: 31, category: "고추류", name: "미인보라(가지고추)", price: 14000, unit: "판" },
-  { id: 32, category: "고추류", name: "신초롱(청양고추)", price: 14000, unit: "판" },
-  { id: 33, category: "고추류", name: "혈조마일드(당조고추)", price: 14000, unit: "판" },
-  { id: 34, category: "고추류", name: "미인풋고추", price: 14000, unit: "판" },
-  { id: 35, category: "고추류", name: "순한길상고추", price: 14000, unit: "판" },
-  { id: 36, category: "고추류", name: "아크다 플러스(금수강산)", price: 14000, unit: "판" },
-  { id: 37, category: "고추류", name: "따고또따고(아삭고추)", price: 14000, unit: "판" },
-  { id: 38, category: "고추류", name: "롱그린(오이고추)", price: 14000, unit: "판" },
-  { id: 39, category: "고추류", name: "PR 점보", price: 14000, unit: "판" },
-  { id: 40, category: "고추류", name: "신홍고추(옛날청양)", price: 14000, unit: "판" },
-  { id: 41, category: "고추류", name: "꽈리고추", price: 14000, unit: "판" },
-  { id: 42, category: "고추류", name: "비타민 고추", price: 14000, unit: "판" },
-  { id: 43, category: "고추류", name: "엄지풋고추", price: 14000, unit: "판" },
-  { id: 44, category: "고추류", name: "칼탄 열풍", price: 14000, unit: "판" },
+  { id: 30, category: "고추류", name: "칼탄(조생강탄, 건고추)", price: 21000, unit: "판" },
+  { id: 31, category: "고추류", name: "미인보라(가지고추)", price: 25000, unit: "판" },
+  { id: 32, category: "고추류", name: "신초롱(청양고추)", price: 16000, unit: "판" },
+  { id: 33, category: "고추류", name: "혈조마일드(당조고추)", price: 25000, unit: "판" },
+  { id: 34, category: "고추류", name: "미인풋고추", price: 16000, unit: "판" },
+  { id: 35, category: "고추류", name: "순한길상고추", price: 15000, unit: "판" },
+  { id: 36, category: "고추류", name: "아크다 플러스(금수강산)", price: 16000, unit: "판" },
+  { id: 37, category: "고추류", name: "따고또따고(아삭고추)", price: 15000, unit: "판" },
+  { id: 38, category: "고추류", name: "롱그린(오이고추)", price: 15000, unit: "판" },
+  { id: 39, category: "고추류", name: "PR 점보", price: 20000, unit: "판" },
+  { id: 40, category: "고추류", name: "신홍고추(옛날청양)", price: 12000, unit: "판" },
+  { id: 41, category: "고추류", name: "꽈리고추", price: 15000, unit: "판" },
+  { id: 42, category: "고추류", name: "비타민 고추", price: 15000, unit: "판" },
+  { id: 43, category: "고추류", name: "엄지풋고추", price: 15000, unit: "판" },
+  { id: 44, category: "고추류", name: "칼탄 열풍", price: 21000, unit: "판" },
 
-  { id: 50, category: "토마토류", name: "흑방울토마토", price: 16000, unit: "판" },
-  { id: 51, category: "토마토류", name: "흑토마토", price: 16000, unit: "판" },
-  { id: 52, category: "토마토류", name: "흑대추방울토마토", price: 16000, unit: "판" },
+  
+  { id: 51, category: "토마토류", name: "흑토마토", price: 25000, unit: "판" },
+  { id: 52, category: "토마토류", name: "흑대추방울토마토", price: 25000, unit: "판" },
   { id: 53, category: "토마토류", name: "빨간대추방울토마토", price: 16000, unit: "판" },
   { id: 54, category: "토마토류", name: "노란대추방울토마토", price: 16000, unit: "판" },
-  { id: 55, category: "토마토류", name: "애플레드방토", price: 16000, unit: "판" },
-  { id: 56, category: "토마토류", name: "애플오렌지방토", price: 16000, unit: "판" },
-  { id: 57, category: "토마토류", name: "애플노랑방토", price: 16000, unit: "판" },
+  { id: 55, category: "토마토류", name: "애플레드방토", price: 30000, unit: "판" },
+  { id: 56, category: "토마토류", name: "애플오렌지방토", price: 30000, unit: "판" },
+  { id: 57, category: "토마토류", name: "애플노랑방토", price: 30000, unit: "판" },
   { id: 58, category: "토마토류", name: "찰토마토", price: 16000, unit: "판" },
   { id: 59, category: "토마토류", name: "일반 방울토마토", price: 16000, unit: "판" },
 
-  { id: 60, category: "상추·엽채류", name: "적로메인", price: 10000, unit: "판" },
-  { id: 61, category: "상추·엽채류", name: "적꽃상추", price: 10000, unit: "판" },
-  { id: 62, category: "상추·엽채류", name: "오향적치마", price: 10000, unit: "판" },
+  { id: 60, category: "상추·엽채류", name: "적로메인", price: 9000, unit: "판" },
+  { id: 61, category: "상추·엽채류", name: "적꽃상추", price: 9000, unit: "판" },
+  { id: 62, category: "상추·엽채류", name: "오향적치마", price: 9000, unit: "판" },
   { id: 63, category: "상추·엽채류", name: "엔다이브 꾸오르 치커리", price: 10000, unit: "판" },
   { id: 64, category: "상추·엽채류", name: "버터헤드 유럽상추", price: 10000, unit: "판" },
   { id: 65, category: "상추·엽채류", name: "줄기상추 궁채", price: 10000, unit: "판" },
   { id: 66, category: "상추·엽채류", name: "아바타 유럽상추", price: 10000, unit: "판" },
   { id: 67, category: "상추·엽채류", name: "TT마릴리사 유럽상추", price: 10000, unit: "판" },
-  { id: 68, category: "상추·엽채류", name: "청치커리", price: 10000, unit: "판" },
-  { id: 69, category: "상추·엽채류", name: "적겨자(갓)", price: 10000, unit: "판" },
-  { id: 70, category: "상추·엽채류", name: "적치커리", price: 10000, unit: "판" },
-  { id: 71, category: "상추·엽채류", name: "신적생채", price: 10000, unit: "판" },
-  { id: 72, category: "상추·엽채류", name: "진빨롤라 상추", price: 10000, unit: "판" },
-  { id: 73, category: "상추·엽채류", name: "청치마상추", price: 10000, unit: "판" },
-  { id: 74, category: "상추·엽채류", name: "오크린 상추", price: 10000, unit: "판" },
-  { id: 75, category: "상추·엽채류", name: "양상추", price: 10000, unit: "판" },
+  { id: 68, category: "상추·엽채류", name: "청치커리", price: 9000, unit: "판" },
+  { id: 69, category: "상추·엽채류", name: "적겨자(갓)", price: 8000, unit: "판" },
+  { id: 70, category: "상추·엽채류", name: "적치커리", price: 8000, unit: "판" },
+  { id: 71, category: "상추·엽채류", name: "신적생채", price: 9000, unit: "판" },
+  { id: 72, category: "상추·엽채류", name: "진빨롤라 상추", price: 9000, unit: "판" },
+  { id: 73, category: "상추·엽채류", name: "청치마상추", price: 9000, unit: "판" },
+  { id: 74, category: "상추·엽채류", name: "오크린 상추", price: 9000, unit: "판" },
+  { id: 75, category: "상추·엽채류", name: "양상추", price: 9000, unit: "판" },
 
-  { id: 80, category: "참외·수박·멜론", name: "망고참외", price: 15000, unit: "판" },
-  { id: 81, category: "참외·수박·멜론", name: "일반참외", price: 15000, unit: "판" },
-  { id: 82, category: "참외·수박·멜론", name: "미니 복수박", price: 16000, unit: "판" },
-  { id: 83, category: "참외·수박·멜론", name: "애플수박", price: 16000, unit: "판" },
-  { id: 84, category: "참외·수박·멜론", name: "망고수박", price: 16000, unit: "판" },
-  { id: 85, category: "참외·수박·멜론", name: "일반수박", price: 16000, unit: "판" },
-  { id: 86, category: "참외·수박·멜론", name: "메론", price: 16000, unit: "판" },
+  { id: 80, category: "참외·수박·멜론", name: "망고참외", price: 35000, unit: "판" },
+  { id: 81, category: "참외·수박·멜론", name: "일반참외", price: 12000, unit: "판" },
+  { id: 82, category: "참외·수박·멜론", name: "미니 복수박", price: 12000, unit: "판" },
+  { id: 83, category: "참외·수박·멜론", name: "애플수박", price: 25000, unit: "판" },
+  { id: 84, category: "참외·수박·멜론", name: "망고수박", price: 30000, unit: "판" },
+  { id: 85, category: "참외·수박·멜론", name: "일반수박", price: 12000, unit: "판" },
+  { id: 86, category: "참외·수박·멜론", name: "메론", price: 15000, unit: "판" },
 
-  { id: 90, category: "옥수수류", name: "옥수수", price: 12000, unit: "판" },
+  { id: 90, category: "옥수수류", name: "옥수수", price: 9000, unit: "판" },
 
-  { id: 100, category: "콩류", name: "강낭콩", price: 12000, unit: "판" },
-  { id: 101, category: "콩류", name: "작두콩", price: 13000, unit: "판" },
-  { id: 102, category: "콩류", name: "땅콩", price: 12000, unit: "판" },
-  { id: 103, category: "콩류", name: "완두콩", price: 12000, unit: "판" },
+  { id: 100, category: "콩류", name: "강낭콩", price: 15000, unit: "판" },
+  { id: 101, category: "콩류", name: "작두콩", price: 20000, unit: "판" },
+  { id: 102, category: "콩류", name: "땅콩", price: 9000, unit: "판" },
+  { id: 103, category: "콩류", name: "완두콩", price: 8000, unit: "판" },
 
-  { id: 110, category: "배추·양배추류", name: "양배추", price: 10000, unit: "판" },
-  { id: 111, category: "배추·양배추류", name: "청경채", price: 10000, unit: "판" },
+  { id: 110, category: "배추·양배추류", name: "양배추", price: 9000, unit: "판" },
+  { id: 111, category: "배추·양배추류", name: "청경채", price: 8000, unit: "판" },
 
-  { id: 120, category: "부추·파·양파류", name: "부추", price: 10000, unit: "판" },
-  { id: 121, category: "부추·파·양파류", name: "대파", price: 10000, unit: "판" },
+  { id: 120, category: "부추·파·양파류", name: "부추", price: 8000, unit: "판" },
+  { id: 121, category: "부추·파·양파류", name: "대파", price: 8000, unit: "판" },
 
   { id: 130, category: "허브·쌈채소", name: "루꼴라", price: 10000, unit: "판" },
-  { id: 131, category: "허브·쌈채소", name: "바질", price: 10000, unit: "판" },
-  { id: 132, category: "허브·쌈채소", name: "고수", price: 10000, unit: "판" },
-  { id: 133, category: "허브·쌈채소", name: "쑥갓", price: 10000, unit: "판" },
-  { id: 134, category: "허브·쌈채소", name: "비트", price: 10000, unit: "판" },
+  { id: 131, category: "허브·쌈채소", name: "바질", price: 15000, unit: "판" },
+  { id: 132, category: "허브·쌈채소", name: "고수", price: 8000, unit: "판" },
+  { id: 133, category: "허브·쌈채소", name: "쑥갓", price: 8000, unit: "판" },
+  { id: 134, category: "허브·쌈채소", name: "비트", price: 8000, unit: "판" },
 
-  { id: 140, category: "가지류", name: "가지(천하대장)", price: 15000, unit: "판" }
+  { id: 140, category: "가지류", name: "가지(천하대장)", price: 12000, unit: "판" }
 ];
 
 const categoryOrder = [
@@ -154,7 +154,7 @@ async function saveOrderToSupabase(payload) {
 }
 
 export default function SeedlingOrderWebApp() {
-  const [customerName] = useState("대성농원");
+  const [customerName, setCustomerName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [openCategories, setOpenCategories] = useState({
     "고추류": false,
@@ -231,6 +231,11 @@ export default function SeedlingOrderWebApp() {
   }, [orderItems]);
 
   const handleSubmit = async () => {
+    if (!customerName.trim()) {
+  alert("거래처 이름을 입력해주세요.");
+  return;
+}
+
     if (orderItems.length === 0) {
       alert("최소 1개 품목 이상 수량을 입력해주세요.");
       return;
@@ -356,7 +361,18 @@ export default function SeedlingOrderWebApp() {
         <div className="sticky top-0 z-10 backdrop-blur bg-slate-100/90 border-b border-slate-200 px-4 pt-4 pb-3">
           <div className="rounded-3xl bg-white shadow-sm border border-slate-200 p-5">
             <div className="text-sm text-slate-500">아셀모종 주문서</div>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{customerName}</h1>
+            <div className="mt-3">
+  <label className="mb-2 block text-sm font-medium text-slate-600">
+    거래처 이름
+  </label>
+  <input
+    type="text"
+    value={customerName}
+    onChange={(e) => setCustomerName(e.target.value)}
+    placeholder="예: 아셀상회, 아셀종묘 등"
+    className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+  />
+</div>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
               원하시는 품목을 검색하거나 카테고리를 펼쳐 수량을 입력해주세요.
             </p>
