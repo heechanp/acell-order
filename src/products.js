@@ -83,7 +83,7 @@ export const products = [
   { id: 120, category: "부추·파·양파류", name: "부추", price: 8000, unit: "판" },
   { id: 121, category: "부추·파·양파류", name: "대파", price: 8000, unit: "판" },
 
-  { id: 130, category: "허브·쌈채소", name: "루꼴라", price: 10000, unit: "판" },
+  { id: 130, category: "허브·쌈채소", name: "루꼴라", price: 12000, unit: "판" },
   { id: 131, category: "허브·쌈채소", name: "바질", price: 15000, unit: "판" },
   { id: 132, category: "허브·쌈채소", name: "고수", price: 8000, unit: "판" },
   { id: 133, category: "허브·쌈채소", name: "쑥갓", price: 8000, unit: "판" },
