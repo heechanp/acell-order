@@ -10,7 +10,7 @@ export const products = [
   { id: 12, category: "박류", name: "수세미", price: 12000, unit: "판" },
   { id: 13, category: "박류", name: "여주", price: 24000, unit: "판" },
 
-  { id: 20, category: "호박류", name: "애호박", price: 10000, unit: "판" },
+  { id: 20, category: "호박류", name: "애호박", price: 12000, unit: "판" },
   { id: 21, category: "호박류", name: "풋호박", price: 10000, unit: "판" },
   { id: 22, category: "호박류", name: "쥬키니", price: 10000, unit: "판" },
   { id: 23, category: "호박류", name: "단호박", price: 15000, unit: "판" },
@@ -27,7 +27,7 @@ export const products = [
   { id: 36, category: "고추류", name: "아크다 플러스(금수강산)", price: 16000, unit: "판" },
   { id: 37, category: "고추류", name: "따고또따고(아삭고추)", price: 15000, unit: "판" },
   { id: 38, category: "고추류", name: "롱그린(오이고추)", price: 15000, unit: "판" },
-  { id: 39, category: "고추류", name: "PR 점보", price: 20000, unit: "판" },
+  { id: 39, category: "고추류", name: "PR 점보", price: 21000, unit: "판" },
   { id: 40, category: "고추류", name: "신홍고추(옛날청양)", price: 12000, unit: "판" },
   { id: 41, category: "고추류", name: "꽈리고추", price: 15000, unit: "판" },
   { id: 42, category: "고추류", name: "비타민 고추", price: 16000, unit: "판" },

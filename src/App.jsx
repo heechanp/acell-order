@@ -143,6 +143,7 @@ export default function SeedlingOrderWebApp() {
   const totalAmount = useMemo(() => {
     return orderItems.reduce((sum, item) => sum + item.amount, 0);
   }, [orderItems]);
+  const totalQuantity = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleSubmit = async () => {
     if (!customerName.trim()) {
@@ -198,7 +199,7 @@ setSubmitted(true);
 
       setSubmittedAt(formattedNow);
       setSubmitted(true);
-      setSubmittedAt("");
+      
     } catch (error) {
       console.error(error);
 
@@ -288,7 +289,10 @@ setSubmitted(true);
           </div>
 
           <div ref={receiptRef} className="mt-6 rounded-2xl bg-slate-50 p-4 pb-8 border border-slate-200">
-            <div className="text-sm text-slate-500">주문 내역</div>
+  <div className="text-sm text-slate-500">주문 내역</div>
+  {submittedAt ? (
+    <div className="mt-1 text-sm text-slate-400">주문일시: {submittedAt}</div>
+  ) : null}
             <div className="mt-3 space-y-2">
               {orderItems.map((item) => (
   <div key={item.id} className="flex items-start justify-between gap-4 text-base">
@@ -304,10 +308,17 @@ setSubmitted(true);
   </div>
 ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between">
-              <span className="text-lg font-bold text-slate-900">총 주문금액</span>
-              <span className="text-xl font-bold text-slate-900">{formatCurrency(totalAmount)}</span>
-            </div>
+            <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
+  <div className="flex items-center justify-between">
+    <span className="text-base text-slate-600">총 판수</span>
+    <span className="text-base font-semibold text-slate-900">{totalQuantity}판</span>
+  </div>
+
+  <div className="flex items-center justify-between">
+    <span className="text-lg font-bold text-slate-900">총 주문금액</span>
+    <span className="text-xl font-bold text-slate-900">{formatCurrency(totalAmount)}</span>
+  </div>
+</div>
             {memo ? (
               <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-sm text-slate-700">
                 <div className="font-semibold mb-1">요청사항</div>
