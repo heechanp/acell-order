@@ -1,102 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import { toPng } from "html-to-image";
+import { products } from "./products";
 
 // 배포 전 설정값
 // Vercel/로컬에서 실제 사용할 때 아래 두 값을 실제 값으로 바꿔주세요.
 const SUPABASE_URL = "https://srbpphccmhbnugcqwcrn.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_OzQ8qeUqYKQWSfZpUz8xEA_kriALOja";
 
-const products = [
-  { id: 1, category: "오이류", name: "청오이", price: 10000, unit: "판" },
-  { id: 2, category: "오이류", name: "가시오이", price: 10000, unit: "판" },
-  { id: 3, category: "오이류", name: "조선오이", price: 10000, unit: "판" },
-  { id: 4, category: "오이류", name: "노각오이", price: 10000, unit: "판" },
-  { id: 5, category: "오이류", name: "미니오이", price: 10000, unit: "판" },
 
-  { id: 10, category: "박류", name: "고지박", price: 10000, unit: "판" },
-  { id: 11, category: "박류", name: "장고지박", price: 10000, unit: "판" },
-  { id: 12, category: "박류", name: "수세미", price: 10000, unit: "판" },
-
-  { id: 20, category: "호박류", name: "애호박", price: 10000, unit: "판" },
-  { id: 21, category: "호박류", name: "풋호박", price: 10000, unit: "판" },
-  { id: 22, category: "호박류", name: "쥬키니", price: 10000, unit: "판" },
-  { id: 23, category: "호박류", name: "단호박", price: 15000, unit: "판" },
-  { id: 24, category: "호박류", name: "미니단호박", price: 25000, unit: "판" },
-  { id: 25, category: "호박류", name: "맷돌호박", price: 10000, unit: "판" },
-  { id: 26, category: "호박류", name: "조선호박", price: 10000, unit: "판" },
-
-  { id: 30, category: "고추류", name: "칼탄(조생강탄, 건고추)", price: 21000, unit: "판" },
-  { id: 31, category: "고추류", name: "미인보라(가지고추)", price: 25000, unit: "판" },
-  { id: 32, category: "고추류", name: "신초롱(청양고추)", price: 16000, unit: "판" },
-  { id: 33, category: "고추류", name: "혈조마일드(당조고추)", price: 25000, unit: "판" },
-  { id: 34, category: "고추류", name: "미인풋고추", price: 16000, unit: "판" },
-  { id: 35, category: "고추류", name: "순한길상고추", price: 15000, unit: "판" },
-  { id: 36, category: "고추류", name: "아크다 플러스(금수강산)", price: 16000, unit: "판" },
-  { id: 37, category: "고추류", name: "따고또따고(아삭고추)", price: 15000, unit: "판" },
-  { id: 38, category: "고추류", name: "롱그린(오이고추)", price: 15000, unit: "판" },
-  { id: 39, category: "고추류", name: "PR 점보", price: 20000, unit: "판" },
-  { id: 40, category: "고추류", name: "신홍고추(옛날청양)", price: 12000, unit: "판" },
-  { id: 41, category: "고추류", name: "꽈리고추", price: 15000, unit: "판" },
-  { id: 42, category: "고추류", name: "비타민 고추", price: 15000, unit: "판" },
-  { id: 43, category: "고추류", name: "엄지풋고추", price: 15000, unit: "판" },
-  { id: 44, category: "고추류", name: "칼탄 열풍", price: 21000, unit: "판" },
-
-  
-  { id: 51, category: "토마토류", name: "흑토마토", price: 25000, unit: "판" },
-  { id: 52, category: "토마토류", name: "흑대추방울토마토", price: 25000, unit: "판" },
-  { id: 53, category: "토마토류", name: "빨간대추방울토마토", price: 16000, unit: "판" },
-  { id: 54, category: "토마토류", name: "노란대추방울토마토", price: 16000, unit: "판" },
-  { id: 55, category: "토마토류", name: "애플레드방토", price: 30000, unit: "판" },
-  { id: 56, category: "토마토류", name: "애플오렌지방토", price: 30000, unit: "판" },
-  { id: 57, category: "토마토류", name: "애플노랑방토", price: 30000, unit: "판" },
-  { id: 58, category: "토마토류", name: "찰토마토", price: 16000, unit: "판" },
-  { id: 59, category: "토마토류", name: "일반 방울토마토", price: 16000, unit: "판" },
-
-  { id: 60, category: "상추·엽채류", name: "적로메인", price: 9000, unit: "판" },
-  { id: 61, category: "상추·엽채류", name: "적꽃상추", price: 9000, unit: "판" },
-  { id: 62, category: "상추·엽채류", name: "오향적치마", price: 9000, unit: "판" },
-  { id: 63, category: "상추·엽채류", name: "엔다이브 꾸오르 치커리", price: 10000, unit: "판" },
-  { id: 64, category: "상추·엽채류", name: "버터헤드 유럽상추", price: 10000, unit: "판" },
-  { id: 65, category: "상추·엽채류", name: "줄기상추 궁채", price: 10000, unit: "판" },
-  { id: 66, category: "상추·엽채류", name: "아바타 유럽상추", price: 10000, unit: "판" },
-  { id: 67, category: "상추·엽채류", name: "TT마릴리사 유럽상추", price: 10000, unit: "판" },
-  { id: 68, category: "상추·엽채류", name: "청치커리", price: 9000, unit: "판" },
-  { id: 69, category: "상추·엽채류", name: "적겨자(갓)", price: 8000, unit: "판" },
-  { id: 70, category: "상추·엽채류", name: "적치커리", price: 8000, unit: "판" },
-  { id: 71, category: "상추·엽채류", name: "신적생채", price: 9000, unit: "판" },
-  { id: 72, category: "상추·엽채류", name: "진빨롤라 상추", price: 9000, unit: "판" },
-  { id: 73, category: "상추·엽채류", name: "청치마상추", price: 9000, unit: "판" },
-  { id: 74, category: "상추·엽채류", name: "오크린 상추", price: 9000, unit: "판" },
-  { id: 75, category: "상추·엽채류", name: "양상추", price: 9000, unit: "판" },
-
-  { id: 80, category: "참외·수박·멜론", name: "망고참외", price: 35000, unit: "판" },
-  { id: 81, category: "참외·수박·멜론", name: "일반참외", price: 12000, unit: "판" },
-  { id: 82, category: "참외·수박·멜론", name: "미니 복수박", price: 12000, unit: "판" },
-  { id: 83, category: "참외·수박·멜론", name: "애플수박", price: 25000, unit: "판" },
-  { id: 84, category: "참외·수박·멜론", name: "망고수박", price: 30000, unit: "판" },
-  { id: 85, category: "참외·수박·멜론", name: "일반수박", price: 12000, unit: "판" },
-  { id: 86, category: "참외·수박·멜론", name: "메론", price: 15000, unit: "판" },
-
-  { id: 90, category: "옥수수류", name: "옥수수", price: 9000, unit: "판" },
-
-  { id: 100, category: "콩류", name: "강낭콩", price: 15000, unit: "판" },
-  { id: 101, category: "콩류", name: "작두콩", price: 20000, unit: "판" },
-  { id: 102, category: "콩류", name: "땅콩", price: 9000, unit: "판" },
-  { id: 103, category: "콩류", name: "완두콩", price: 8000, unit: "판" },
-
-  { id: 110, category: "배추·양배추류", name: "양배추", price: 9000, unit: "판" },
-  { id: 111, category: "배추·양배추류", name: "청경채", price: 8000, unit: "판" },
-
-  { id: 120, category: "부추·파·양파류", name: "부추", price: 8000, unit: "판" },
-  { id: 121, category: "부추·파·양파류", name: "대파", price: 8000, unit: "판" },
-
-  { id: 130, category: "허브·쌈채소", name: "루꼴라", price: 10000, unit: "판" },
-  { id: 131, category: "허브·쌈채소", name: "바질", price: 15000, unit: "판" },
-  { id: 132, category: "허브·쌈채소", name: "고수", price: 8000, unit: "판" },
-  { id: 133, category: "허브·쌈채소", name: "쑥갓", price: 8000, unit: "판" },
-  { id: 134, category: "허브·쌈채소", name: "비트", price: 8000, unit: "판" },
-
-  { id: 140, category: "가지류", name: "가지(천하대장)", price: 12000, unit: "판" }
-];
 
 const categoryOrder = [
   "고추류",
@@ -179,8 +90,11 @@ export default function SeedlingOrderWebApp() {
   );
   const [memo, setMemo] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [isDownloadingImage, setIsDownloadingImage] = useState(false);
+  const receiptRef = useRef(null);
 
   const updateQty = (id, nextValue) => {
     const safeValue = Math.max(0, Number(nextValue) || 0);
@@ -264,7 +178,11 @@ export default function SeedlingOrderWebApp() {
       } else {
         console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
       }
+      const now = new Date();
+      const formattedNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      setSubmittedAt(formattedNow);
       setSubmitted(true);
+      setSubmittedAt("");
     } catch (error) {
       console.error(error);
 
@@ -301,6 +219,33 @@ export default function SeedlingOrderWebApp() {
   };
 
   const formatCurrency = (value) => `${value.toLocaleString()}원`;
+  const downloadReceiptImage = async () => {
+  if (!receiptRef.current) return;
+
+  try {
+    setIsDownloadingImage(true);
+
+    const dataUrl = await toPng(receiptRef.current, {
+      cacheBust: true,
+      pixelRatio: 2,
+    });
+
+    const link = document.createElement("a");
+    const safeCustomerName = (customerName || "주문명세서").replace(/[\\/:*?"<>|]/g, "_");
+    const fileDate = submittedAt
+      ? submittedAt.replace(/[ :]/g, "-")
+      : new Date().toISOString().slice(0, 16).replace("T", "-");
+
+    link.download = `${safeCustomerName}-${fileDate}.png`;
+    link.href = dataUrl;
+    link.click();
+  } catch (error) {
+    console.error(error);
+    alert("이미지 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  } finally {
+    setIsDownloadingImage(false);
+  }
+};
 
   if (submitted) {
     return (
@@ -313,6 +258,9 @@ export default function SeedlingOrderWebApp() {
               거래처 <span className="font-semibold text-slate-900">{customerName}</span> 주문이 저장되었습니다.
               <br />담당자가 확인 후 연락드릴게요.
             </p>
+            {submittedAt ? (
+            <p className="mt-3 text-sm text-slate-500">주문일시: {submittedAt}</p>
+            ) : null}
             {!isSupabaseConfigured() ? (
               <p className="mt-3 text-sm text-amber-600">
                 현재는 데모 모드입니다. 실제 저장을 위해 Supabase URL/Key를 입력해주세요.
@@ -320,17 +268,22 @@ export default function SeedlingOrderWebApp() {
             ) : null}
           </div>
 
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 border border-slate-200">
+          <div ref={receiptRef} className="mt-6 rounded-2xl bg-slate-50 p-4 pb-8 border border-slate-200">
             <div className="text-sm text-slate-500">주문 내역</div>
             <div className="mt-3 space-y-2">
               {orderItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between text-base">
-                  <span className="text-slate-700">
-                    {item.name} {item.quantity}{item.unit}
-                  </span>
-                  <span className="font-semibold text-slate-900">{formatCurrency(item.amount)}</span>
-                </div>
-              ))}
+  <div key={item.id} className="flex items-start justify-between gap-4 text-base">
+    <div className="text-slate-700">
+      <div className="font-medium text-slate-900">{item.name}</div>
+      <div className="mt-1 text-sm text-slate-500">
+        {formatCurrency(item.price)} × {item.quantity}{item.unit}
+      </div>
+    </div>
+    <span className="font-semibold text-slate-900 whitespace-nowrap">
+      {formatCurrency(item.amount)}
+    </span>
+  </div>
+))}
             </div>
             <div className="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between">
               <span className="text-lg font-bold text-slate-900">총 주문금액</span>
@@ -343,7 +296,13 @@ export default function SeedlingOrderWebApp() {
               </div>
             ) : null}
           </div>
-
+<button
+  onClick={downloadReceiptImage}
+  disabled={isDownloadingImage}
+  className="mt-6 w-full rounded-2xl border border-slate-300 bg-white text-slate-900 py-4 text-lg font-semibold shadow-sm active:scale-[0.99] transition disabled:opacity-60"
+>
+  {isDownloadingImage ? "이미지 만드는 중..." : "이미지 저장"}
+</button>
           <button
             onClick={resetOrder}
             className="mt-6 w-full rounded-2xl bg-slate-900 text-white py-4 text-lg font-semibold shadow-lg active:scale-[0.99] transition"
@@ -358,7 +317,7 @@ export default function SeedlingOrderWebApp() {
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto w-full max-w-md pb-36">
-        <div className="sticky top-0 z-10 backdrop-blur bg-slate-100/90 border-b border-slate-200 px-4 pt-4 pb-3">
+        <div className="backdrop-blur bg-slate-100/90 border-b border-slate-200 px-4 pt-4 pb-3">
           <div className="rounded-3xl bg-white shadow-sm border border-slate-200 p-5">
             <div className="text-sm text-slate-500">아셀모종 주문서</div>
             <div className="mt-3">
@@ -415,7 +374,7 @@ export default function SeedlingOrderWebApp() {
                       return (
                         <div
                           key={`${category}-${product.id}`}
-                          className="rounded-3xl bg-slate-50 border border-slate-200 shadow-sm p-4 mt-3"
+                          className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -430,7 +389,7 @@ export default function SeedlingOrderWebApp() {
                             </div>
                           </div>
 
-                          <div className="mt-4 flex items-center gap-3">
+                          <div className="mt-4 flex min-w-0 items-center gap-2">
                             <button
                               onClick={() => updateQty(product.id, qty - 1)}
                               className="h-14 w-14 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98]"
@@ -440,17 +399,17 @@ export default function SeedlingOrderWebApp() {
                             </button>
 
                             <input
-                              type="number"
-                              min="0"
-                              inputMode="numeric"
-                              value={qty}
-                              onChange={(e) => updateQty(product.id, e.target.value)}
-                              className="h-14 flex-1 rounded-2xl border border-slate-300 text-center text-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-                            />
+  type="number"
+  min="0"
+  inputMode="numeric"
+  value={qty}
+  onChange={(e) => updateQty(product.id, e.target.value)}
+  className="h-14 min-w-0 flex-1 rounded-2xl border border-slate-300 text-center text-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+/>
 
                             <button
                               onClick={() => updateQty(product.id, qty + 1)}
-                              className="h-14 w-14 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98]"
+                              className="h-12 w-12 shrink-0 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98]"
                               aria-label={`${product.name} 수량 늘리기`}
                             >
                               +
