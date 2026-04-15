@@ -179,7 +179,9 @@ export default function SeedlingOrderWebApp() {
         console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
       }
       const now = new Date();
-      const formattedNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+const formattedNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+setSubmittedAt(formattedNow);
+setSubmitted(true);
 
       await fetch("/api/send-order-email", {
   method: "POST",
@@ -223,6 +225,8 @@ export default function SeedlingOrderWebApp() {
     setSubmitted(false);
     setSearchTerm("");
     setSaveError("");
+    setSubmittedAt("");   // 👈 이거 추가
+
   };
 
   const toggleCategory = (category) => {
@@ -272,6 +276,7 @@ export default function SeedlingOrderWebApp() {
               거래처 <span className="font-semibold text-slate-900">{customerName}</span> 주문이 저장되었습니다.
               <br />담당자가 확인 후 연락드릴게요.
             </p>
+            
             {submittedAt ? (
             <p className="mt-3 text-sm text-slate-500">주문일시: {submittedAt}</p>
             ) : null}

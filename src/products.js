@@ -1,13 +1,13 @@
 export const products = [
-  { id: 1, category: "오이류", name: "청오이", price: 10000, unit: "판" },
+  { id: 1, category: "오이류", name: "청오이", price: 12000, unit: "판" },
   { id: 2, category: "오이류", name: "가시오이", price: 10000, unit: "판" },
   { id: 3, category: "오이류", name: "조선오이", price: 10000, unit: "판" },
   { id: 4, category: "오이류", name: "노각오이", price: 10000, unit: "판" },
   { id: 5, category: "오이류", name: "미니오이", price: 10000, unit: "판" },
 
-  { id: 10, category: "박류", name: "고지박", price: 10000, unit: "판" },
+  { id: 10, category: "박류", name: "고지박", price: 12000, unit: "판" },
   
-  { id: 12, category: "박류", name: "수세미", price: 10000, unit: "판" },
+  { id: 12, category: "박류", name: "수세미", price: 12000, unit: "판" },
   { id: 13, category: "박류", name: "여주", price: 24000, unit: "판" },
 
   { id: 20, category: "호박류", name: "애호박", price: 10000, unit: "판" },
