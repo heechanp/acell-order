@@ -30,7 +30,7 @@ export const products = [
   { id: 39, category: "고추류", name: "PR 점보", price: 20000, unit: "판" },
   { id: 40, category: "고추류", name: "신홍고추(옛날청양)", price: 12000, unit: "판" },
   { id: 41, category: "고추류", name: "꽈리고추", price: 15000, unit: "판" },
-  { id: 42, category: "고추류", name: "비타민 고추", price: 15000, unit: "판" },
+  { id: 42, category: "고추류", name: "비타민 고추", price: 16000, unit: "판" },
   { id: 43, category: "고추류", name: "엄지풋고추", price: 15000, unit: "판" },
   { id: 44, category: "고추류", name: "칼탄 열풍", price: 21000, unit: "판" },
 
