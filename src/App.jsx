@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { products } from "./products";
+import { productsA } from "./productsA";
+import { productsB } from "./productsB";
 
 // 배포 전 설정값
 // Vercel/로컬에서 실제 사용할 때 아래 두 값을 실제 값으로 바꿔주세요.
@@ -66,6 +67,8 @@ async function saveOrderToSupabase(payload) {
 
 export default function SeedlingOrderWebApp() {
   const [customerName, setCustomerName] = useState("");
+  const [customerType, setCustomerType] = useState("A");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [openCategories, setOpenCategories] = useState({
     "고추류": false,
@@ -82,6 +85,9 @@ export default function SeedlingOrderWebApp() {
     "참외·수박·멜론": false,
     "박류": false
   });
+
+    const products = customerType === "A" ? productsA : productsB;
+
   const [quantities, setQuantities] = useState(
     products.reduce((acc, product) => {
       acc[product.id] = 0;
@@ -109,7 +115,7 @@ export default function SeedlingOrderWebApp() {
       product.name.toLowerCase().includes(keyword) ||
       product.category.toLowerCase().includes(keyword)
     );
-  }, [searchTerm]);
+  }, [searchTerm, products]);
 
   const productsByCategory = useMemo(() => {
     const groups = {};
@@ -138,7 +144,7 @@ export default function SeedlingOrderWebApp() {
         };
       })
       .filter((item) => item.quantity > 0);
-  }, [quantities]);
+  }, [quantities, products]);
 
   const totalAmount = useMemo(() => {
     return orderItems.reduce((sum, item) => sum + item.amount, 0);
@@ -361,6 +367,20 @@ setSubmitted(true);
     placeholder="예: 아셀상회, 아셀종묘 등"
     className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
   />
+  <div className="mt-4">
+  <label className="mb-2 block text-sm font-medium text-slate-600">
+    거래처 구분
+  </label>
+  <select
+    value={customerType}
+    onChange={(e) => setCustomerType(e.target.value)}
+    className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-lg font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+  >
+    <option value="A">죽도</option>
+    <option value="B">로타리</option>
+  </select>
+</div>
+
 </div>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
               원하시는 품목을 검색하거나 카테고리를 펼쳐 수량을 입력해주세요.
@@ -492,13 +512,4 @@ setSubmitted(true);
 }
 
 // 간단 확인용 테스트 데이터
-export const __demoTests = {
-  totalExample: products
-    .filter((p) => [1, 30].includes(p.id))
-    .map((p) => ({ ...p, quantity: p.id === 1 ? 2 : 1, amount: (p.id === 1 ? 2 : 1) * p.price })),
-  categoryCount: categoryOrder.length,
-  hasBeetInHerb: products.some((p) => p.category === "허브·쌈채소" && p.name === "비트"),
-  hasSusemiInBak: products.some((p) => p.category === "박류" && p.name === "수세미"),
-  detectsSupabaseConfigured: isSupabaseConfigured(),
-  hasOrderTableEndpoint: `${SUPABASE_URL}/rest/v1/orders`.includes("/rest/v1/orders")
-};
+
