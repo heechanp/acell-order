@@ -228,6 +228,19 @@ const [selectedPayment, setSelectedPayment] = useState(null);
 
 const [developerCustomerId, setDeveloperCustomerId] = useState("");
 
+const [productStatus, setProductStatus] = useState({});
+
+const toggleProductStatus = (productId) => {
+  setProductStatus((prev) => {
+    const currentStatus = prev[productId] ?? "active";
+
+    return {
+      ...prev,
+      [productId]: currentStatus === "inactive" ? "active" : "inactive",
+    };
+  });
+};
+
   const selectedCustomer = customers.find(
     (c) => String(c.id) === String(selectedCustomerId)
   );
@@ -238,7 +251,10 @@ const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
 
   const customerType = selectedCustomer?.price_type || "A";
   const products = customerType === "A" ? productsA : productsB;
-
+const productsWithStatus = products.map((product) => ({
+  ...product,
+  status: productStatus[product.id] ?? product.status ?? "active",
+}));
   
 
   useEffect(() => {
@@ -397,15 +413,17 @@ useEffect(() => {
     setQuantities((prev) => ({ ...prev, [id]: safeValue }));
   };
 
-  const filteredProducts = useMemo(() => {
-    const keyword = searchTerm.trim().toLowerCase();
-    if (!keyword) return products;
 
-    return products.filter((product) =>
-      product.name.toLowerCase().includes(keyword) ||
-      product.category.toLowerCase().includes(keyword)
-    );
-  }, [searchTerm, products]);
+
+const filteredProducts = useMemo(() => {
+  const keyword = searchTerm.trim().toLowerCase();
+  if (!keyword) return productsWithStatus;
+
+  return productsWithStatus.filter((product) =>
+    product.name.toLowerCase().includes(keyword) ||
+    product.category.toLowerCase().includes(keyword)
+  );
+}, [searchTerm, productsWithStatus]);
 
 
 const filteredOrdersForView = useMemo(() => {
@@ -456,8 +474,8 @@ useEffect(() => {
   }, [productsByCategory]);
 
   const orderItems = useMemo(() => {
-    return products
-      .map((product) => {
+  return productsWithStatus
+    .map((product) => {
         const quantity = quantities[product.id] || 0;
         return {
           ...product,
@@ -1492,8 +1510,9 @@ const formatDateTime = (value) => {
                 {isOpen ? (
                   <div className="border-t border-slate-100 px-4 pb-4 space-y-3 bg-white">
                     {items.map((product) => {
-                      const qty = quantities[product.id] || 0;
-                      const amount = qty * product.price;
+  const qty = quantities[product.id] || 0;
+  const amount = qty * product.price;
+  const isInactive = product.status === "inactive";
 
                       return (
                         <div
@@ -1501,44 +1520,66 @@ const formatDateTime = (value) => {
                           className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 shadow-sm sm:p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="text-xl font-bold text-slate-900">{product.name}</div>
-                              <div className="mt-1 text-sm text-slate-500">
-                                {formatCurrency(product.price)} / {product.unit}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs text-slate-400">금액</div>
-                              <div className="text-lg font-bold text-slate-900">{formatCurrency(amount)}</div>
-                            </div>
-                          </div>
+  <div>
+    <div className="text-xl font-bold text-slate-900">{product.name}</div>
+    <div className="mt-1 text-sm text-slate-500">
+      {formatCurrency(product.price)} / {product.unit}
+    </div>
 
-                          <div className="mt-4 flex min-w-0 items-center gap-2">
-                            <button
-                              onClick={() => updateQty(product.id, qty - 1)}
-                              className="h-14 w-14 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98]"
-                              aria-label={`${product.name} 수량 줄이기`}
-                            >
-                              -
-                            </button>
+    {isInactive ? (
+      <div className="mt-2 text-xs font-medium text-amber-600">
+        현재 준비중입니다. 조금만 기다려주세요 🙏
+      </div>
+    ) : null}
 
-                            <input
-  type="number"
-  min="0"
-  inputMode="numeric"
-  value={qty}
-  onChange={(e) => updateQty(product.id, e.target.value)}
-  className="h-14 min-w-0 flex-1 rounded-2xl border border-slate-300 text-center text-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-/>
+    {isDeveloperMode && isDeveloperUnlocked ? (
+      <button
+        type="button"
+        onClick={() => toggleProductStatus(product.id)}
+        className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+      >
+        {isInactive ? "활성으로 변경" : "비활성으로 변경"}
+      </button>
+    ) : null}
+  </div>
 
-                            <button
-                              onClick={() => updateQty(product.id, qty + 1)}
-                              className="h-12 w-12 shrink-0 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98]"
-                              aria-label={`${product.name} 수량 늘리기`}
-                            >
-                              +
-                            </button>
-                          </div>
+  <div className="text-right">
+    <div className="text-xs text-slate-400">금액</div>
+    <div className="text-lg font-bold text-slate-900">{formatCurrency(amount)}</div>
+  </div>
+</div>
+
+                       <div className="mt-4 flex min-w-0 items-center gap-2">
+  <button
+    type="button"
+    disabled={isInactive}
+    onClick={() => updateQty(product.id, qty - 1)}
+    className="h-14 w-14 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+    aria-label={`${product.name} 수량 줄이기`}
+  >
+    -
+  </button>
+
+  <input
+    type="number"
+    min="0"
+    inputMode="numeric"
+    value={qty}
+    disabled={isInactive}
+    onChange={(e) => updateQty(product.id, e.target.value)}
+    className="h-14 min-w-0 flex-1 rounded-2xl border border-slate-300 text-center text-2xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+  />
+
+  <button
+    type="button"
+    disabled={isInactive}
+    onClick={() => updateQty(product.id, qty + 1)}
+    className="h-12 w-12 shrink-0 rounded-2xl border border-slate-300 bg-white text-2xl font-bold text-slate-800 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+    aria-label={`${product.name} 수량 늘리기`}
+  >
+    +
+  </button>
+</div>
                         </div>
                       );
                     })}
