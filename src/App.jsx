@@ -1569,7 +1569,7 @@ const formatDateTime = (value) => {
         <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur">
   <div className="mx-auto max-w-md px-4 py-4">
     {orderItems.length > 0 ? (
-      <div className="mb-3 max-h-60 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <div className="mb-3 max-h-50 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200 bg-slate-50 p-3">
         
         <div className="mb-2 text-sm font-semibold text-slate-700">선택한 품목
   <span className="ml-2 text-xs text-slate-400">(스크롤 가능)</span>
@@ -1604,11 +1604,17 @@ const formatDateTime = (value) => {
     )}
 
     <div className="mb-3 flex items-center justify-between">
-      <span className="text-base text-slate-600">총 주문금액</span>
-      <span className="text-2xl font-bold text-slate-900">
-        {formatCurrency(totalAmount)}
-      </span>
-    </div>
+  <span className="text-base text-slate-600">
+    총 주문금액
+    <span className="ml-1 text-sm text-slate-500">
+      ({(orderItems || []).reduce((sum, item) => sum + (item.quantity || 0), 0)}판)
+    </span>
+  </span>
+
+  <span className="text-2xl font-bold text-slate-900">
+    {formatCurrency(totalAmount)}
+  </span>
+</div>
 
     <button
       onClick={handleSubmit}

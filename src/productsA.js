@@ -88,7 +88,7 @@ export const productsA = [
   { id: 132, category: "허브·쌈채소", name: "고수", price: 8000, unit: "판" },
   { id: 133, category: "허브·쌈채소", name: "쑥갓", price: 8000, unit: "판" },
   { id: 134, category: "허브·쌈채소", name: "비트", price: 8000, unit: "판" },
-  { id: 135, category: "허브·쌈채소", name: "케일", price: 9000, unit: "판" },
+  { id: 135, category: "허브·쌈채소", name: "케일", price: 8000, unit: "판" },
 
   { id: 140, category: "가지류", name: "가지(천하대장)", price: 12000, unit: "판" }
 ];
