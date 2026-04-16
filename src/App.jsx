@@ -65,6 +65,64 @@ async function saveOrderToSupabase(payload) {
   return response.json();
 }
 
+async function fetchProductStatuses() {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/product_status?select=product_id,customer_type,status`,
+    {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "상품 상태 조회 실패");
+    throw error;
+  }
+
+  return response.json();
+}
+
+
+async function saveProductStatusToSupabase({ productId, status }) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/product_status`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+    body: JSON.stringify({
+  product_id: productId,
+  status,
+  updated_at: new Date().toISOString(),
+}),
+  });
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "상품 상태 저장 실패");
+    throw error;
+  }
+
+  return response.json();
+}
+
 async function fetchCustomers() {
   const response = await fetch(
     `${SUPABASE_URL}/rest/v1/customers?select=id,name,price_type,is_active&is_active=eq.true&order=id.asc`,
@@ -230,15 +288,33 @@ const [developerCustomerId, setDeveloperCustomerId] = useState("");
 
 const [productStatus, setProductStatus] = useState({});
 
-const toggleProductStatus = (productId) => {
-  setProductStatus((prev) => {
-    const currentStatus = prev[productId] ?? "active";
 
-    return {
+const toggleProductStatus = async (productId) => {
+  const key = productId;
+  const currentStatus = productStatus[key] ?? "active";
+  const nextStatus = currentStatus === "inactive" ? "active" : "inactive";
+
+  try {
+    await saveProductStatusToSupabase({
+      productId,
+      status: nextStatus,
+    });
+
+    setProductStatus((prev) => ({
       ...prev,
-      [productId]: currentStatus === "inactive" ? "active" : "inactive",
-    };
-  });
+      [key]: nextStatus,
+    }));
+
+    if (nextStatus === "inactive") {
+      setQuantities((prev) => ({
+        ...prev,
+        [productId]: 0,
+      }));
+    }
+  } catch (error) {
+    console.error(error);
+    alert("상품 상태 저장에 실패했습니다.");
+  }
 };
 
   const selectedCustomer = customers.find(
@@ -251,11 +327,34 @@ const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
 
   const customerType = selectedCustomer?.price_type || "A";
   const products = customerType === "A" ? productsA : productsB;
+
+
 const productsWithStatus = products.map((product) => ({
   ...product,
   status: productStatus[product.id] ?? product.status ?? "active",
 }));
   
+
+useEffect(() => {
+  async function loadProductStatuses() {
+    try {
+      if (!isSupabaseConfigured()) return;
+      const data = await fetchProductStatuses();
+
+     const mapped = {};
+data.forEach((row) => {
+  mapped[row.product_id] = row.status;
+});
+
+      setProductStatus(mapped);
+    } catch (error) {
+      console.error(error);
+      alert("상품 상태를 불러오지 못했습니다.");
+    }
+  }
+
+  loadProductStatuses();
+}, []);
 
   useEffect(() => {
     async function loadCustomers() {
@@ -1525,6 +1624,8 @@ const formatDateTime = (value) => {
     <div className="mt-1 text-sm text-slate-500">
       {formatCurrency(product.price)} / {product.unit}
     </div>
+
+    
 
     {isInactive ? (
       <div className="mt-2 text-xs font-medium text-amber-600">
