@@ -93,7 +93,7 @@ async function fetchCustomers() {
 
 async function fetchOrders() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?select=id,customer_id,total_amount,created_at&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/orders?select=id,customer_id,customer_name,items,total_amount,memo,created_at&order=created_at.desc`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -119,7 +119,7 @@ async function fetchOrders() {
 
 async function fetchPayments() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?select=id,customer_id,amount,created_at&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/payments?select=id,customer_id,amount,memo,created_at&order=created_at.desc`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -143,14 +143,89 @@ async function fetchPayments() {
   return response.json();
 }
 
+
+async function savePaymentToSupabase(payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "입금 저장 실패");
+    throw error;
+  }
+
+  return response.json();
+}
+
+async function deletePaymentFromSupabase(paymentId) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/payments?id=eq.${paymentId}`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        Prefer: "return=representation"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "입금 삭제 실패");
+    throw error;
+  }
+
+  return response;
+}
+
 export default function SeedlingOrderWebApp() {
+  const [orderViewCustomerId, setOrderViewCustomerId] = useState("");
+const [orderPage, setOrderPage] = useState(1);
+const [selectedOrder, setSelectedOrder] = useState(null);
+
+
+const [paymentCustomerId, setPaymentCustomerId] = useState("");
+const [paymentAmount, setPaymentAmount] = useState("");
+const [paymentMemo, setPaymentMemo] = useState("");
+const [isSavingPayment, setIsSavingPayment] = useState(false);
+
+const [deletingPaymentId, setDeletingPaymentId] = useState(null);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
+  const [developerPassword, setDeveloperPassword] = useState("");
+const [isDeveloperUnlocked, setIsDeveloperUnlocked] = useState(false);
+
   const selectedCustomer = customers.find(
     (c) => String(c.id) === String(selectedCustomerId)
   );
+
+  const DEV_CUSTOMER_NAME = "개발자 모드";
+const DEV_PASSWORD = "2908";
+const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
 
   const customerType = selectedCustomer?.price_type || "A";
   const products = customerType === "A" ? productsA : productsB;
@@ -169,6 +244,11 @@ export default function SeedlingOrderWebApp() {
 
     loadCustomers();
   }, []);
+
+  useEffect(() => {
+  setDeveloperPassword("");
+  setIsDeveloperUnlocked(false);
+}, [selectedCustomerId]);
 
   useEffect(() => {
   loadSummaryData();
@@ -253,6 +333,35 @@ const [payments, setPayments] = useState([]);
     );
   }, [searchTerm, products]);
 
+
+  const filteredOrdersForView = useMemo(() => {
+  if (!orderViewCustomerId) return [];
+
+  return orders
+    .filter((order) => String(order.customer_id) === String(orderViewCustomerId))
+    .slice()
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}, [orders, orderViewCustomerId]);
+
+
+const ORDERS_PER_PAGE = 5;
+
+const totalOrderPages = Math.max(
+  1,
+  Math.ceil(filteredOrdersForView.length / ORDERS_PER_PAGE)
+);
+
+const pagedOrders = useMemo(() => {
+  const startIndex = (orderPage - 1) * ORDERS_PER_PAGE;
+  return filteredOrdersForView.slice(startIndex, startIndex + ORDERS_PER_PAGE);
+}, [filteredOrdersForView, orderPage]);
+
+
+useEffect(() => {
+  setOrderPage(1);
+  setSelectedOrder(null);
+}, [orderViewCustomerId]);
+
   const productsByCategory = useMemo(() => {
     const groups = {};
     filteredProducts.forEach((product) => {
@@ -295,6 +404,8 @@ const [payments, setPayments] = useState([]);
     };
   }
 
+  
+
   const totalOrdered = orders
     .filter((order) => order.customer_id === selectedCustomer.id)
     .reduce((sum, order) => sum + (order.total_amount || 0), 0);
@@ -310,7 +421,85 @@ const [payments, setPayments] = useState([]);
   };
 }, [selectedCustomer, orders, payments]);
 
+const recentPayments = useMemo(() => {
+  if (!paymentCustomerId) return [];
+
+  return payments
+    .filter((payment) => String(payment.customer_id) === String(paymentCustomerId))
+    .slice()
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
+}, [payments, paymentCustomerId]);
+
+const getCustomerNameById = (customerId) => {
+  return customers.find((c) => c.id === customerId)?.name || `거래처 #${customerId}`;
+};
+
   const totalQuantity = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const unlockDeveloperMode = () => {
+  if (developerPassword === DEV_PASSWORD) {
+    setIsDeveloperUnlocked(true);
+  } else {
+    alert("비밀번호가 올바르지 않습니다.");
+  }
+};
+
+const handleSavePayment = async () => {
+  if (!paymentCustomerId) {
+    alert("입금 거래처를 선택해주세요.");
+    return;
+  }
+
+  const amount = Number(paymentAmount);
+  if (!amount || amount <= 0) {
+    alert("입금액을 올바르게 입력해주세요.");
+    return;
+  }
+
+  try {
+    setIsSavingPayment(true);
+
+    await savePaymentToSupabase({
+      customer_id: Number(paymentCustomerId),
+      amount,
+      memo: paymentMemo || null
+    });
+
+    setPaymentCustomerId("");
+    setPaymentAmount("");
+    setPaymentMemo("");
+    await loadSummaryData();
+
+    alert("입금이 저장되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("입금 저장에 실패했습니다.");
+  } finally {
+    setIsSavingPayment(false);
+  }
+};
+
+
+const handleDeletePayment = async (paymentId) => {
+  const ok = window.confirm("이 입금 내역을 삭제할까요?");
+  if (!ok) return;
+
+  try {
+    setDeletingPaymentId(paymentId);
+
+    await deletePaymentFromSupabase(paymentId);
+    await loadSummaryData();
+
+    alert("입금 내역이 삭제되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("입금 내역 삭제에 실패했습니다.");
+  } finally {
+    setDeletingPaymentId(null);
+  }
+};
+
 
 const handleSubmit = async () => {
   if (!selectedCustomer) {
@@ -326,6 +515,7 @@ const handleSubmit = async () => {
   setSaveError("");
   setIsSaving(true);
   
+
 
   const payload = {
     customer_id: selectedCustomer.id,
@@ -410,6 +600,48 @@ const handleSubmit = async () => {
   };
 
   const formatCurrency = (value) => `${value.toLocaleString()}원`;
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+
+  let normalized = String(value).trim();
+
+  // "2026-04-16 01:23:45" 처럼 T/Z 없는 경우
+  // UTC 기준값으로 간주해서 파싱되도록 보정
+  if (
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(normalized) &&
+    !normalized.includes("T")
+  ) {
+    normalized = normalized.replace(" ", "T") + "Z";
+  }
+
+  // "2026-04-16T01:23:45" 처럼 Z 없는 경우도 UTC로 간주
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(normalized) &&
+    !normalized.endsWith("Z") &&
+    !/[+-]\d{2}:\d{2}$/.test(normalized)
+  ) {
+    normalized = normalized + "Z";
+  }
+
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type) => parts.find((p) => p.type === type)?.value || "";
+
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+};
   const downloadReceiptImage = async () => {
   if (!receiptRef.current) return;
 
@@ -573,6 +805,277 @@ const handleSubmit = async () => {
 {selectedCustomer ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">거래처 요약</div>
+
+
+{isDeveloperMode && !isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+    <div className="text-lg font-bold text-slate-900">개발자 모드</div>
+    <p className="mt-2 text-sm text-slate-600">
+      개발자 모드를 사용하려면 비밀번호를 입력해주세요.
+    </p>
+
+    <input
+      type="password"
+      value={developerPassword}
+      onChange={(e) => setDeveloperPassword(e.target.value)}
+      placeholder="비밀번호 입력"
+      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    />
+
+    <button
+      onClick={unlockDeveloperMode}
+      className="mt-3 w-full rounded-2xl bg-slate-900 py-4 text-base font-bold text-white shadow-lg active:scale-[0.99] transition"
+    >
+      확인
+    </button>
+  </div>
+) : null}
+
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+    <div className="text-lg font-bold text-slate-900">입금 등록</div>
+    <p className="mt-2 text-sm text-slate-600">
+      먼저 입금 거래처를 선택해주세요.
+    </p>
+
+    <select
+      value={paymentCustomerId}
+      onChange={(e) => setPaymentCustomerId(e.target.value)}
+      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    >
+      <option value="">입금 거래처를 선택하세요</option>
+      {customers.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+        </option>
+      ))}
+    </select>
+
+    {paymentCustomerId ? (
+      <>
+        <input
+          type="number"
+          min="0"
+          inputMode="numeric"
+          value={paymentAmount}
+          onChange={(e) => setPaymentAmount(e.target.value)}
+          placeholder="입금액 입력"
+          className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+        />
+
+        <textarea
+          value={paymentMemo}
+          onChange={(e) => setPaymentMemo(e.target.value)}
+          placeholder="메모 (선택)"
+          className="mt-3 min-h-[90px] w-full rounded-2xl border border-slate-300 p-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 resize-none"
+        />
+
+        <button
+          onClick={handleSavePayment}
+          disabled={isSavingPayment}
+          className="mt-3 w-full rounded-2xl bg-slate-900 py-4 text-base font-bold text-white shadow-lg active:scale-[0.99] transition disabled:opacity-60"
+        >
+          {isSavingPayment ? "입금 저장 중..." : "입금 등록"}
+        </button>
+      </>
+    ) : null}
+  </div>
+) : null}
+
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">최근 입금 내역</div>
+
+    {recentPayments.length === 0 ? (
+      <p className="mt-2 text-sm text-slate-500">아직 등록된 입금 내역이 없습니다.</p>
+    ) : (
+      <div className="mt-3 space-y-3">
+        {recentPayments.map((payment) => (
+          <div
+            key={payment.id}
+            className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+  <div className="min-w-0">
+    <div className="text-sm font-semibold text-slate-900">
+      {getCustomerNameById(payment.customer_id)}
+    </div>
+    <div className="mt-1 text-xs text-slate-500">
+      {formatDateTime(payment.created_at)}
+    </div>
+  </div>
+
+  <div className="shrink-0 flex items-center gap-2">
+    <div className="text-right">
+      <div className="text-sm font-bold text-slate-900">
+        {formatCurrency(payment.amount)}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => handleDeletePayment(payment.id)}
+      disabled={deletingPaymentId === payment.id}
+      className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 shadow-sm disabled:opacity-60"
+    >
+      {deletingPaymentId === payment.id ? "삭제 중..." : "삭제"}
+    </button>
+  </div>
+</div>
+            {payment.memo ? (
+              <div className="mt-2 text-sm text-slate-600">
+                메모: {payment.memo}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+) : null}
+
+
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">주문 내역 조회</div>
+    <p className="mt-2 text-sm text-slate-600">
+      거래처를 선택하면 해당 거래처의 주문 내역만 최신순으로 표시됩니다.
+    </p>
+
+    <select
+      value={orderViewCustomerId}
+      onChange={(e) => setOrderViewCustomerId(e.target.value)}
+      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    >
+      <option value="">조회할 거래처를 선택하세요</option>
+      {customers.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+        </option>
+      ))}
+    </select>
+  </div>
+) : null}
+
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">주문 내역 목록</div>
+
+    {!orderViewCustomerId ? (
+      <p className="mt-2 text-sm text-slate-500">
+        거래처를 선택하면 주문 내역이 표시됩니다.
+      </p>
+    ) : pagedOrders.length === 0 ? (
+      <p className="mt-2 text-sm text-slate-500">
+        선택한 거래처의 주문 내역이 없습니다.
+      </p>
+    ) : (
+      <>
+        <div className="mt-3 space-y-3">
+          {pagedOrders.map((order) => {
+            const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+
+            return (
+              <button
+                key={order.id}
+                type="button"
+                onClick={() => setSelectedOrder(order)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900">
+                      {order.customer_name || getCustomerNameById(order.customer_id)}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {formatDateTime(order.created_at)}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-sm font-bold text-slate-900">
+                      {formatCurrency(order.total_amount || 0)}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      품목 {itemCount}개
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setOrderPage((prev) => Math.max(1, prev - 1))}
+            disabled={orderPage === 1}
+            className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+          >
+            이전
+          </button>
+
+          <span className="text-sm text-slate-600">
+            {orderPage} / {totalOrderPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setOrderPage((prev) => Math.min(totalOrderPages, prev + 1))}
+            disabled={orderPage === totalOrderPages}
+            className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+          >
+            다음
+          </button>
+        </div>
+      </>
+    )}
+  </div>
+) : null}
+
+{isDeveloperMode && isDeveloperUnlocked && selectedOrder ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">선택한 주문 명세서</div>
+    <div className="mt-2 text-sm text-slate-500">
+      주문일시: {formatDateTime(selectedOrder.created_at)}
+    </div>
+
+    <div className="mt-4 space-y-2">
+      {(selectedOrder.items || []).map((item, index) => (
+        <div
+          key={`${selectedOrder.id}-${index}`}
+          className="flex items-start justify-between gap-4 text-base"
+        >
+          <div className="text-slate-700">
+            <div className="font-medium text-slate-900">{item.name}</div>
+            <div className="mt-1 text-sm text-slate-500">
+              {formatCurrency(item.unit_price || 0)} × {item.quantity}{item.unit}
+            </div>
+          </div>
+          <span className="font-semibold text-slate-900 whitespace-nowrap">
+            {formatCurrency(item.amount || 0)}
+          </span>
+        </div>
+      ))}
+    </div>
+
+    <div className="mt-4 pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-between">
+        <span className="text-lg font-bold text-slate-900">총 주문금액</span>
+        <span className="text-xl font-bold text-slate-900">
+          {formatCurrency(selectedOrder.total_amount || 0)}
+        </span>
+      </div>
+    </div>
+
+    {selectedOrder.memo ? (
+      <div className="mt-4 rounded-xl bg-slate-50 p-3 border border-slate-200 text-sm text-slate-700">
+        <div className="font-semibold mb-1">요청사항</div>
+        <div>{selectedOrder.memo}</div>
+      </div>
+    ) : null}
+  </div>
+) : null}
 
     <div className="mt-3 space-y-2 text-sm">
       <div className="flex items-center justify-between">
