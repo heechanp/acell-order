@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { customerName, submittedAt, orderItems, totalAmount, memo } = req.body;
+    const { customerName, submittedAt, orderItems, totalAmount, totalQuantity, memo } = req.body;
 
     const itemsHtml = (orderItems || [])
       .map(
@@ -47,9 +47,13 @@ export default async function handler(req, res) {
           </tbody>
         </table>
 
-        <p style="margin-top:20px;font-size:18px;">
-          <strong>총 주문금액: ${formatCurrency(totalAmount)}</strong>
-        </p>
+        <p style="margin-top:20px;font-size:16px;">
+  <strong>총 판수: ${Number(totalQuantity || 0).toLocaleString()}판</strong>
+</p>
+
+<p style="margin-top:8px;font-size:18px;">
+  <strong>총 주문금액: ${formatCurrency(totalAmount)}</strong>
+</p>
 
         ${
           memo

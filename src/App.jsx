@@ -707,11 +707,12 @@ localStorage.removeItem("seedling-order-draft");
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        customerName: selectedCustomer.name,
-        submittedAt: formattedNow,
-        orderItems,
-        totalAmount,
-      }),
+  customerName: selectedCustomer.name,
+  submittedAt: formattedNow,
+  orderItems,
+  totalAmount,
+  totalQuantity,
+}),
     });
 
     setSubmittedAt(formattedNow);
@@ -1005,14 +1006,21 @@ const formatDateTime = (value) => {
       ))}
     </div>
 
-    <div className="mt-4 pt-4 border-t border-slate-200">
-      <div className="flex items-center justify-between">
-        <span className="text-lg font-bold text-slate-900">총 주문금액</span>
-        <span className="text-xl font-bold text-slate-900">
-          {formatCurrency(selectedReceiptOrder.total_amount || 0)}
-        </span>
-      </div>
-    </div>
+    <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
+  <div className="flex items-center justify-between">
+    <span className="text-base text-slate-600">총 판수</span>
+    <span className="text-base font-semibold text-slate-900">
+      {(selectedReceiptOrder.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0)}판
+    </span>
+  </div>
+
+  <div className="flex items-center justify-between">
+    <span className="text-lg font-bold text-slate-900">총 주문금액</span>
+    <span className="text-xl font-bold text-slate-900">
+      {formatCurrency(selectedReceiptOrder.total_amount || 0)}
+    </span>
+  </div>
+</div>
 
     {selectedReceiptOrder.memo ? (
       <div className="mt-4 rounded-xl bg-slate-50 p-3 border border-slate-200 text-sm text-slate-700">
@@ -1043,11 +1051,14 @@ const formatDateTime = (value) => {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto w-full max-w-md pb-36">
+      <div className="mx-auto w-full max-w-md pb-72">
         <div className="backdrop-blur bg-slate-100/90 border-b border-slate-200 px-4 pt-4 pb-3">
           <div className="rounded-3xl bg-white shadow-sm border border-slate-200 p-5">
-            <div className="text-sm text-slate-500">아셀모종 주문서</div>
-            <div className="mt-3">
+          <div className="text-sm text-slate-500">아셀모종 주문서</div>
+<div className="mt-1 text-xs text-slate-500">
+  입금계좌: 3333-16-2231854 카카오뱅크 박희찬
+</div>
+         <div className="mt-3">
   
   <div className="mt-3">
   <label className="mb-2 block text-sm font-medium text-slate-600">
@@ -1068,7 +1079,7 @@ const formatDateTime = (value) => {
   </select>
 </div>
 
-{selectedCustomer ? (
+{selectedCustomer && isDeveloperMode ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">거래처 요약</div>
 
@@ -1404,6 +1415,24 @@ const formatDateTime = (value) => {
       ))}
     </div>
 
+
+<div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
+  <div className="flex items-center justify-between">
+    <span className="text-base text-slate-600">총 판수</span>
+    <span className="text-base font-semibold text-slate-900">
+      {(selectedOrder.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0)}판
+    </span>
+  </div>
+
+  <div className="flex items-center justify-between">
+    <span className="text-lg font-bold text-slate-900">총 주문금액</span>
+    <span className="text-xl font-bold text-slate-900">
+      {formatCurrency(selectedOrder.total_amount || 0)}
+    </span>
+  </div>
+</div>
+
+
     <div className="mt-4 pt-4 border-t border-slate-200">
       <div className="flex items-center justify-between">
         <span className="text-lg font-bold text-slate-900">총 주문금액</span>
@@ -1536,21 +1565,57 @@ const formatDateTime = (value) => {
           ) : null}
         </div>
 
+        
         <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto max-w-md px-4 py-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-base text-slate-600">총 주문금액</span>
-              <span className="text-2xl font-bold text-slate-900">{formatCurrency(totalAmount)}</span>
-            </div>
-            <button
-              onClick={handleSubmit}
-              disabled={isSaving}
-              className="w-full rounded-2xl bg-slate-900 py-4 text-lg font-bold text-white shadow-lg active:scale-[0.99] transition disabled:opacity-60"
+  <div className="mx-auto max-w-md px-4 py-4">
+    {orderItems.length > 0 ? (
+      <div className="mb-3 max-h-48 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <div className="mb-2 text-sm font-semibold text-slate-700">선택한 품목</div>
+
+        <div className="space-y-2">
+          {orderItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-start justify-between gap-3 text-sm"
             >
-              {isSaving ? "저장 중..." : "주문하기"}
-            </button>
-          </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-slate-900">{item.name}</div>
+                <div className="mt-1 text-slate-500">
+                  {formatCurrency(item.price)} × {item.quantity}{item.unit}
+                </div>
+              </div>
+
+              <div className="shrink-0 font-bold text-slate-900">
+                {formatCurrency(item.amount)}
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
+    ) : (
+      <div className="mb-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-500">
+        아직 선택한 품목이 없습니다.
+      </div>
+    )}
+
+    <div className="mb-3 flex items-center justify-between">
+      <span className="text-base text-slate-600">총 주문금액</span>
+      <span className="text-2xl font-bold text-slate-900">
+        {formatCurrency(totalAmount)}
+      </span>
+    </div>
+
+    <button
+      onClick={handleSubmit}
+      disabled={isSaving}
+      className="w-full rounded-2xl bg-slate-900 py-4 text-lg font-bold text-white shadow-lg active:scale-[0.99] transition disabled:opacity-60"
+    >
+      {isSaving ? "저장 중..." : "주문하기"}
+    </button>
+  </div>
+</div>
+
+
       </div>
     </div>
   );
