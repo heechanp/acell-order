@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { productsA } from "./productsA";
 import { productsB } from "./productsB";
@@ -65,11 +65,132 @@ async function saveOrderToSupabase(payload) {
   return response.json();
 }
 
-export default function SeedlingOrderWebApp() {
-  const [customerName, setCustomerName] = useState("");
-  const [customerType, setCustomerType] = useState("A");
+async function fetchCustomers() {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/customers?select=id,name,price_type,is_active&is_active=eq.true&order=id.asc`,
+    {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }
+  );
 
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "거래처 목록 조회 실패");
+    throw error;
+  }
+
+  return response.json();
+}
+
+async function fetchOrders() {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/orders?select=id,customer_id,total_amount,created_at&order=created_at.desc`,
+    {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "주문 목록 조회 실패");
+    throw error;
+  }
+
+  return response.json();
+}
+
+async function fetchPayments() {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/payments?select=id,customer_id,amount,created_at&order=created_at.desc`,
+    {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "입금 목록 조회 실패");
+    throw error;
+  }
+
+  return response.json();
+}
+
+export default function SeedlingOrderWebApp() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+
+  const selectedCustomer = customers.find(
+    (c) => String(c.id) === String(selectedCustomerId)
+  );
+
+  const customerType = selectedCustomer?.price_type || "A";
+  const products = customerType === "A" ? productsA : productsB;
+
+  useEffect(() => {
+    async function loadCustomers() {
+      try {
+        if (!isSupabaseConfigured()) return;
+        const data = await fetchCustomers();
+        setCustomers(data);
+      } catch (error) {
+        console.error(error);
+        alert("거래처 목록을 불러오지 못했습니다.");
+      }
+    }
+
+    loadCustomers();
+  }, []);
+
+  useEffect(() => {
+  loadSummaryData();
+}, []);
+
+  const loadSummaryData = async () => {
+  try {
+    if (!isSupabaseConfigured()) return;
+
+    const [ordersData, paymentsData] = await Promise.all([
+      fetchOrders(),
+      fetchPayments()
+    ]);
+
+    setOrders(ordersData);
+    setPayments(paymentsData);
+  } catch (error) {
+    console.error(error);
+    alert("주문/입금 데이터를 불러오지 못했습니다.");
+  }
+};
+
   const [openCategories, setOpenCategories] = useState({
     "고추류": false,
     "상추·엽채류": false,
@@ -86,7 +207,7 @@ export default function SeedlingOrderWebApp() {
     "박류": false
   });
 
-    const products = customerType === "A" ? productsA : productsB;
+
 
   const [quantities, setQuantities] = useState(
     products.reduce((acc, product) => {
@@ -94,6 +215,18 @@ export default function SeedlingOrderWebApp() {
       return acc;
     }, {})
   );
+
+  useEffect(() => {
+  if (!selectedCustomer) return;
+
+  setQuantities(
+    products.reduce((acc, product) => {
+      acc[product.id] = 0;
+      return acc;
+    }, {})
+  );
+}, [selectedCustomerId, products]);
+
   const [memo, setMemo] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submittedAt, setSubmittedAt] = useState("");
@@ -101,6 +234,9 @@ export default function SeedlingOrderWebApp() {
   const [saveError, setSaveError] = useState("");
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
   const receiptRef = useRef(null);
+  const [orders, setOrders] = useState([]);
+const [payments, setPayments] = useState([]);
+
 
   const updateQty = (id, nextValue) => {
     const safeValue = Math.max(0, Number(nextValue) || 0);
@@ -149,77 +285,107 @@ export default function SeedlingOrderWebApp() {
   const totalAmount = useMemo(() => {
     return orderItems.reduce((sum, item) => sum + item.amount, 0);
   }, [orderItems]);
+
+  const selectedCustomerSummary = useMemo(() => {
+  if (!selectedCustomer) {
+    return {
+      totalOrdered: 0,
+      totalPaid: 0,
+      balance: 0
+    };
+  }
+
+  const totalOrdered = orders
+    .filter((order) => order.customer_id === selectedCustomer.id)
+    .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+
+  const totalPaid = payments
+    .filter((payment) => payment.customer_id === selectedCustomer.id)
+    .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+  return {
+    totalOrdered,
+    totalPaid,
+    balance: totalOrdered - totalPaid
+  };
+}, [selectedCustomer, orders, payments]);
+
   const totalQuantity = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleSubmit = async () => {
-    if (!customerName.trim()) {
-  alert("거래처 이름을 입력해주세요.");
-  return;
-}
+const handleSubmit = async () => {
+  if (!selectedCustomer) {
+    alert("거래처를 선택해주세요.");
+    return;
+  }
 
-    if (orderItems.length === 0) {
-      alert("최소 1개 품목 이상 수량을 입력해주세요.");
-      return;
-    }
+  if (orderItems.length === 0) {
+    alert("최소 1개 품목 이상 수량을 입력해주세요.");
+    return;
+  }
 
-    setSaveError("");
-    setIsSaving(true);
+  setSaveError("");
+  setIsSaving(true);
+  
 
-    const payload = {
-      customer_name: customerName,
-      items: orderItems.map((item) => ({
-        category: item.category,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        unit_price: item.price,
-        amount: item.amount
-      })),
-      total_amount: totalAmount,
-      memo: memo || null
-    };
-
-    try {
-      if (isSupabaseConfigured()) {
-        await saveOrderToSupabase(payload);
-      } else {
-        console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
-      }
-      const now = new Date();
-const formattedNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-setSubmittedAt(formattedNow);
-setSubmitted(true);
-
-      await fetch("/api/send-order-email", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    customerName,
-    submittedAt: formattedNow,
-    orderItems,
-    totalAmount,
-  }),
-});
-
-      setSubmittedAt(formattedNow);
-      setSubmitted(true);
-      
-    } catch (error) {
-      console.error(error);
-
-      if (error?.code === "42501") {
-        setSaveError(
-          "주문 저장 권한이 없습니다. Supabase에서 orders 테이블의 RLS INSERT 정책을 추가해주세요."
-        );
-      } else {
-        setSaveError("주문 저장에 실패했습니다. Supabase 설정 또는 정책을 확인해주세요.");
-      }
-    } finally {
-      setIsSaving(false);
-    }
+  const payload = {
+    customer_id: selectedCustomer.id,
+    customer_name: selectedCustomer.name,
+    items: orderItems.map((item) => ({
+      category: item.category,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.price,
+      amount: item.amount
+    })),
+    total_amount: totalAmount,
+    memo: memo || null
   };
+
+  try {
+    if (isSupabaseConfigured()) {
+      await saveOrderToSupabase(payload);
+        await loadSummaryData();
+
+    } else {
+      console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
+    }
+
+    const now = new Date();
+    const formattedNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    setSubmittedAt(formattedNow);
+    setSubmitted(true);
+
+    await fetch("/api/send-order-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerName: selectedCustomer.name,
+        submittedAt: formattedNow,
+        orderItems,
+        totalAmount,
+      }),
+    });
+
+    setSubmittedAt(formattedNow);
+    setSubmitted(true);
+  } catch (error) {
+    console.error(error);
+
+    if (error?.code === "42501") {
+      setSaveError(
+        "주문 저장 권한이 없습니다. Supabase에서 orders 테이블의 RLS INSERT 정책을 추가해주세요."
+      );
+    } else {
+      setSaveError("주문 저장에 실패했습니다. Supabase 설정 또는 정책을 확인해주세요.");
+    }
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const resetOrder = () => {
     setQuantities(
@@ -256,7 +422,7 @@ setSubmitted(true);
     });
 
     const link = document.createElement("a");
-    const safeCustomerName = (customerName || "주문명세서").replace(/[\\/:*?"<>|]/g, "_");
+    const safeCustomerName = (selectedCustomer?.name || "주문명세서").replace(/[\\/:*?"<>|]/g, "_");
     const fileDate = submittedAt
       ? submittedAt.replace(/[ :]/g, "-")
       : new Date().toISOString().slice(0, 16).replace("T", "-");
@@ -280,7 +446,7 @@ setSubmitted(true);
             <div className="text-4xl mb-3">✅</div>
             <h1 className="text-2xl font-bold text-slate-900">주문이 접수되었습니다</h1>
             <p className="mt-2 text-slate-600 leading-relaxed">
-              거래처 <span className="font-semibold text-slate-900">{customerName}</span> 주문이 저장되었습니다.
+              거래처 <span className="font-semibold text-slate-900">{selectedCustomer?.name}</span> 주문이 저장되었습니다.
               <br />담당자가 확인 후 연락드릴게요.
             </p>
             
@@ -325,6 +491,33 @@ setSubmitted(true);
     <span className="text-xl font-bold text-slate-900">{formatCurrency(totalAmount)}</span>
   </div>
 </div>
+
+<div className="mt-4 pt-4 border-t border-slate-200">
+  <div className="text-sm font-semibold text-slate-700 mb-2">거래처 정산 현황</div>
+
+  <div className="space-y-2">
+    <div className="flex items-center justify-between">
+      <span className="text-base text-slate-600">누적 주문액</span>
+      <span className="text-base font-semibold text-slate-900">
+        {formatCurrency(selectedCustomerSummary.totalOrdered)}
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between">
+      <span className="text-base text-slate-600">누적 입금액</span>
+      <span className="text-base font-semibold text-slate-900">
+        {formatCurrency(selectedCustomerSummary.totalPaid)}
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between">
+      <span className="text-base font-bold text-slate-900">현재 미수금</span>
+      <span className="text-lg font-bold text-slate-900">
+        {formatCurrency(selectedCustomerSummary.balance)}
+      </span>
+    </div>
+  </div>
+</div>
             {memo ? (
               <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-sm text-slate-700">
                 <div className="font-semibold mb-1">요청사항</div>
@@ -357,29 +550,54 @@ setSubmitted(true);
           <div className="rounded-3xl bg-white shadow-sm border border-slate-200 p-5">
             <div className="text-sm text-slate-500">아셀모종 주문서</div>
             <div className="mt-3">
+  
+  <div className="mt-3">
   <label className="mb-2 block text-sm font-medium text-slate-600">
-    거래처 이름
+    거래처 선택
   </label>
-  <input
-    type="text"
-    value={customerName}
-    onChange={(e) => setCustomerName(e.target.value)}
-    placeholder="예: 아셀상회, 아셀종묘 등"
-    className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-  />
-  <div className="mt-4">
-  <label className="mb-2 block text-sm font-medium text-slate-600">
-    거래처 구분
-  </label>
+
   <select
-    value={customerType}
-    onChange={(e) => setCustomerType(e.target.value)}
+    value={selectedCustomerId}
+    onChange={(e) => setSelectedCustomerId(e.target.value)}
     className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-lg font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
   >
-    <option value="A">죽도</option>
-    <option value="B">로타리</option>
+    <option value="">거래처를 선택하세요</option>
+    {customers.map((c) => (
+      <option key={c.id} value={c.id}>
+        {c.name}
+      </option>
+    ))}
   </select>
 </div>
+
+{selectedCustomer ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+    <div className="text-lg font-bold text-slate-900">거래처 요약</div>
+
+    <div className="mt-3 space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-slate-600">누적 주문액</span>
+        <span className="font-semibold text-slate-900">
+          {formatCurrency(selectedCustomerSummary.totalOrdered)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-slate-600">누적 입금액</span>
+        <span className="font-semibold text-slate-900">
+          {formatCurrency(selectedCustomerSummary.totalPaid)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+        <span className="text-slate-900 font-bold">현재 미수금</span>
+        <span className="text-lg font-bold text-slate-900">
+          {formatCurrency(selectedCustomerSummary.balance)}
+        </span>
+      </div>
+    </div>
+  </div>
+) : null}
 
 </div>
             <p className="mt-2 text-sm text-slate-600 leading-relaxed">
