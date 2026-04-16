@@ -200,6 +200,10 @@ async function deletePaymentFromSupabase(paymentId) {
 }
 
 export default function SeedlingOrderWebApp() {
+
+  const [receiptOrderPage, setReceiptOrderPage] = useState(1);
+const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
+
   const [orderViewCustomerId, setOrderViewCustomerId] = useState("");
 const [orderPage, setOrderPage] = useState(1);
 const [selectedOrder, setSelectedOrder] = useState(null);
@@ -219,6 +223,8 @@ const [deletingPaymentId, setDeletingPaymentId] = useState(null);
   const [developerPassword, setDeveloperPassword] = useState("");
 const [isDeveloperUnlocked, setIsDeveloperUnlocked] = useState(false);
 
+
+
   const selectedCustomer = customers.find(
     (c) => String(c.id) === String(selectedCustomerId)
   );
@@ -229,6 +235,8 @@ const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
 
   const customerType = selectedCustomer?.price_type || "A";
   const products = customerType === "A" ? productsA : productsB;
+
+  
 
   useEffect(() => {
     async function loadCustomers() {
@@ -296,16 +304,7 @@ const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
     }, {})
   );
 
-  useEffect(() => {
-  if (!selectedCustomer) return;
 
-  setQuantities(
-    products.reduce((acc, product) => {
-      acc[product.id] = 0;
-      return acc;
-    }, {})
-  );
-}, [selectedCustomerId, products]);
 
   const [memo, setMemo] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -316,7 +315,79 @@ const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
   const receiptRef = useRef(null);
   const [orders, setOrders] = useState([]);
 const [payments, setPayments] = useState([]);
+const [isDraftRestored, setIsDraftRestored] = useState(false);
 
+  useEffect(() => {
+  if (!selectedCustomer) return;
+  if (!isDraftRestored) return;
+
+  const savedDraft = localStorage.getItem("seedling-order-draft");
+
+  if (savedDraft) {
+    try {
+      const parsed = JSON.parse(savedDraft);
+      if (String(parsed.selectedCustomerId) === String(selectedCustomerId)) {
+        return;
+      }
+    } catch {}
+  }
+
+  setQuantities(
+    products.reduce((acc, product) => {
+      acc[product.id] = 0;
+      return acc;
+    }, {})
+  );
+}, [selectedCustomerId, products, selectedCustomer, isDraftRestored]);
+
+
+useEffect(() => {
+  const savedDraft = localStorage.getItem("seedling-order-draft");
+  if (!savedDraft) return;
+
+  try {
+    const parsed = JSON.parse(savedDraft);
+
+    if (parsed.selectedCustomerId) {
+      setSelectedCustomerId(parsed.selectedCustomerId);
+    }
+
+    if (parsed.memo) {
+      setMemo(parsed.memo);
+    }
+
+    if (parsed.searchTerm) {
+      setSearchTerm(parsed.searchTerm);
+    }
+
+    if (parsed.quantities) {
+      setQuantities(parsed.quantities);
+    }
+  } catch (error) {
+    console.error("임시저장 불러오기 실패:", error);
+  }
+  setIsDraftRestored(true);
+
+}, []);
+useEffect(() => {
+  const draft = {
+    selectedCustomerId,
+    memo,
+    searchTerm,
+    quantities,
+  };
+
+  localStorage.setItem("seedling-order-draft", JSON.stringify(draft));
+}, [selectedCustomerId, memo, searchTerm, quantities]);
+
+useEffect(() => {
+  if (submitted) {
+    window.scrollTo({
+      top: 0,
+      behavior: "auto",
+    });
+  }
+}, [submitted]);
 
   const updateQty = (id, nextValue) => {
     const safeValue = Math.max(0, Number(nextValue) || 0);
@@ -404,6 +475,7 @@ useEffect(() => {
     };
   }
 
+
   
 
   const totalOrdered = orders
@@ -420,6 +492,31 @@ useEffect(() => {
     balance: totalOrdered - totalPaid
   };
 }, [selectedCustomer, orders, payments]);
+
+
+
+const RECEIPT_ORDERS_PER_PAGE = 5;
+
+const recentOrdersForCustomer = useMemo(() => {
+  if (!selectedCustomer) return [];
+
+  return orders
+    .filter((order) => String(order.customer_id) === String(selectedCustomer.id))
+    .slice()
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}, [orders, selectedCustomer]);
+
+const receiptTotalPages = Math.max(
+  1,
+  Math.ceil(recentOrdersForCustomer.length / RECEIPT_ORDERS_PER_PAGE)
+);
+
+const pagedReceiptOrders = useMemo(() => {
+  const startIndex = (receiptOrderPage - 1) * RECEIPT_ORDERS_PER_PAGE;
+  return recentOrdersForCustomer.slice(startIndex, startIndex + RECEIPT_ORDERS_PER_PAGE);
+}, [recentOrdersForCustomer, receiptOrderPage]);
+
+
 
 const recentPayments = useMemo(() => {
   if (!paymentCustomerId) return [];
@@ -513,6 +610,13 @@ const handleSubmit = async () => {
   }
 
   setSaveError("");
+
+  
+
+setReceiptOrderPage(1);
+setSelectedReceiptOrder(null);
+
+localStorage.removeItem("seedling-order-draft");
   setIsSaving(true);
   
 
@@ -589,7 +693,7 @@ const handleSubmit = async () => {
     setSearchTerm("");
     setSaveError("");
     setSubmittedAt("");   // 👈 이거 추가
-
+localStorage.removeItem("seedling-order-draft");
   };
 
   const toggleCategory = (category) => {
@@ -757,6 +861,118 @@ const formatDateTime = (value) => {
               </div>
             ) : null}
           </div>
+
+      <div className="mt-4 pt-4 border-t border-slate-200">
+  <div className="text-sm font-semibold text-slate-700 mb-2">최근 주문 내역</div>
+
+  {pagedReceiptOrders.length === 0 ? (
+    <div className="text-sm text-slate-500">최근 주문 내역이 없습니다.</div>
+  ) : (
+    <>
+      <div className="space-y-3">
+        {pagedReceiptOrders.map((order) => {
+          const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+
+          return (
+            <button
+              key={order.id}
+              type="button"
+              onClick={() => setSelectedReceiptOrder(order)}
+              className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-slate-900">
+                    {formatDateTime(order.created_at)}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    품목 {itemCount}개
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-bold text-slate-900">
+                    {formatCurrency(order.total_amount || 0)}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setReceiptOrderPage((prev) => Math.max(1, prev - 1))}
+          disabled={receiptOrderPage === 1}
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+        >
+          이전
+        </button>
+
+        <span className="text-sm text-slate-600">
+          {receiptOrderPage} / {receiptTotalPages}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => setReceiptOrderPage((prev) => Math.min(receiptTotalPages, prev + 1))}
+          disabled={receiptOrderPage === receiptTotalPages}
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+        >
+          다음
+        </button>
+      </div>
+    </>
+  )}
+</div>
+
+{selectedReceiptOrder ? (
+  <div className="mt-4 rounded-2xl bg-white p-4 border border-slate-200">
+    <div className="text-lg font-bold text-slate-900">선택한 주문 명세서</div>
+    <div className="mt-2 text-sm text-slate-500">
+      주문일시: {formatDateTime(selectedReceiptOrder.created_at)}
+    </div>
+
+    <div className="mt-4 space-y-2">
+      {(selectedReceiptOrder.items || []).map((item, index) => (
+        <div
+          key={`${selectedReceiptOrder.id}-${index}`}
+          className="flex items-start justify-between gap-4 text-base"
+        >
+          <div className="text-slate-700">
+            <div className="font-medium text-slate-900">{item.name}</div>
+            <div className="mt-1 text-sm text-slate-500">
+              {formatCurrency(item.unit_price || 0)} × {item.quantity}{item.unit}
+            </div>
+          </div>
+
+          <span className="font-semibold text-slate-900 whitespace-nowrap">
+            {formatCurrency(item.amount || 0)}
+          </span>
+        </div>
+      ))}
+    </div>
+
+    <div className="mt-4 pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-between">
+        <span className="text-lg font-bold text-slate-900">총 주문금액</span>
+        <span className="text-xl font-bold text-slate-900">
+          {formatCurrency(selectedReceiptOrder.total_amount || 0)}
+        </span>
+      </div>
+    </div>
+
+    {selectedReceiptOrder.memo ? (
+      <div className="mt-4 rounded-xl bg-slate-50 p-3 border border-slate-200 text-sm text-slate-700">
+        <div className="font-semibold mb-1">요청사항</div>
+        <div>{selectedReceiptOrder.memo}</div>
+      </div>
+    ) : null}
+  </div>
+) : null}
+
 <button
   onClick={downloadReceiptImage}
   disabled={isDownloadingImage}
@@ -1077,28 +1293,7 @@ const formatDateTime = (value) => {
   </div>
 ) : null}
 
-    <div className="mt-3 space-y-2 text-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-slate-600">누적 주문액</span>
-        <span className="font-semibold text-slate-900">
-          {formatCurrency(selectedCustomerSummary.totalOrdered)}
-        </span>
-      </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-slate-600">누적 입금액</span>
-        <span className="font-semibold text-slate-900">
-          {formatCurrency(selectedCustomerSummary.totalPaid)}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between border-t border-slate-200 pt-2">
-        <span className="text-slate-900 font-bold">현재 미수금</span>
-        <span className="text-lg font-bold text-slate-900">
-          {formatCurrency(selectedCustomerSummary.balance)}
-        </span>
-      </div>
-    </div>
   </div>
 ) : null}
 
