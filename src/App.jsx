@@ -223,7 +223,10 @@ const [deletingPaymentId, setDeletingPaymentId] = useState(null);
   const [developerPassword, setDeveloperPassword] = useState("");
 const [isDeveloperUnlocked, setIsDeveloperUnlocked] = useState(false);
 
+const [paymentPage, setPaymentPage] = useState(1);
+const [selectedPayment, setSelectedPayment] = useState(null);
 
+const [developerCustomerId, setDeveloperCustomerId] = useState("");
 
   const selectedCustomer = customers.find(
     (c) => String(c.id) === String(selectedCustomerId)
@@ -405,14 +408,14 @@ useEffect(() => {
   }, [searchTerm, products]);
 
 
-  const filteredOrdersForView = useMemo(() => {
-  if (!orderViewCustomerId) return [];
+const filteredOrdersForView = useMemo(() => {
+  if (!developerCustomerId) return [];
 
   return orders
-    .filter((order) => String(order.customer_id) === String(orderViewCustomerId))
+    .filter((order) => String(order.customer_id) === String(developerCustomerId))
     .slice()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-}, [orders, orderViewCustomerId]);
+}, [orders, developerCustomerId]);
 
 
 const ORDERS_PER_PAGE = 5;
@@ -431,7 +434,10 @@ const pagedOrders = useMemo(() => {
 useEffect(() => {
   setOrderPage(1);
   setSelectedOrder(null);
-}, [orderViewCustomerId]);
+  setPaymentPage(1);
+  setSelectedPayment(null);
+}, [developerCustomerId]);
+
 
   const productsByCategory = useMemo(() => {
     const groups = {};
@@ -494,6 +500,31 @@ useEffect(() => {
 }, [selectedCustomer, orders, payments]);
 
 
+const developerTargetCustomerId = developerCustomerId || "";
+
+const developerCustomerSummary = useMemo(() => {
+  if (!developerTargetCustomerId) {
+    return {
+      totalOrdered: 0,
+      totalPaid: 0,
+      balance: 0,
+    };
+  }
+
+  const totalOrdered = orders
+    .filter((order) => String(order.customer_id) === String(developerTargetCustomerId))
+    .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+
+  const totalPaid = payments
+    .filter((payment) => String(payment.customer_id) === String(developerTargetCustomerId))
+    .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+  return {
+    totalOrdered,
+    totalPaid,
+    balance: totalOrdered - totalPaid,
+  };
+}, [developerTargetCustomerId, orders, payments]);
 
 const RECEIPT_ORDERS_PER_PAGE = 5;
 
@@ -519,14 +550,33 @@ const pagedReceiptOrders = useMemo(() => {
 
 
 const recentPayments = useMemo(() => {
-  if (!paymentCustomerId) return [];
+  if (!developerCustomerId) return [];
 
   return payments
-    .filter((payment) => String(payment.customer_id) === String(paymentCustomerId))
+    .filter((payment) => String(payment.customer_id) === String(developerCustomerId))
     .slice()
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 5);
-}, [payments, paymentCustomerId]);
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+}, [payments, developerCustomerId]);
+
+const PAYMENTS_PER_PAGE = 5;
+
+const paymentTotalPages = Math.max(
+  1,
+  Math.ceil(recentPayments.length / PAYMENTS_PER_PAGE)
+);
+
+const pagedPayments = useMemo(() => {
+  const startIndex = (paymentPage - 1) * PAYMENTS_PER_PAGE;
+  return recentPayments.slice(startIndex, startIndex + PAYMENTS_PER_PAGE);
+}, [recentPayments, paymentPage]);
+
+
+useEffect(() => {
+  setPaymentPage(1);
+  setSelectedPayment(null);
+}, [paymentCustomerId]);
+
 
 const getCustomerNameById = (customerId) => {
   return customers.find((c) => c.id === customerId)?.name || `거래처 #${customerId}`;
@@ -543,7 +593,7 @@ const getCustomerNameById = (customerId) => {
 };
 
 const handleSavePayment = async () => {
-  if (!paymentCustomerId) {
+  if (!developerCustomerId) {
     alert("입금 거래처를 선택해주세요.");
     return;
   }
@@ -558,7 +608,7 @@ const handleSavePayment = async () => {
     setIsSavingPayment(true);
 
     await savePaymentToSupabase({
-      customer_id: Number(paymentCustomerId),
+customer_id: Number(developerCustomerId),
       amount,
       memo: paymentMemo || null
     });
@@ -1047,27 +1097,39 @@ const formatDateTime = (value) => {
   </div>
 ) : null}
 
+
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">조회할 거래처 선택</div>
+    <p className="mt-2 text-sm text-slate-600">
+      거래처를 먼저 선택하면 입금 등록, 주문 내역, 정산 요약이 모두 해당 거래처 기준으로 표시됩니다.
+    </p>
+
+    <select
+      value={developerCustomerId}
+      onChange={(e) => setDeveloperCustomerId(e.target.value)}
+      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    >
+      <option value="">거래처를 선택하세요</option>
+      {customers
+        .map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+    </select>
+  </div>
+) : null}
+
 {isDeveloperMode && isDeveloperUnlocked ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">입금 등록</div>
     <p className="mt-2 text-sm text-slate-600">
-      먼저 입금 거래처를 선택해주세요.
-    </p>
+  위에서 선택한 거래처로 입금을 등록합니다.
+</p>
 
-    <select
-      value={paymentCustomerId}
-      onChange={(e) => setPaymentCustomerId(e.target.value)}
-      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-    >
-      <option value="">입금 거래처를 선택하세요</option>
-      {customers.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.name}
-        </option>
-      ))}
-    </select>
 
-    {paymentCustomerId ? (
+{developerCustomerId ? (
       <>
         <input
           type="number"
@@ -1102,49 +1164,127 @@ const formatDateTime = (value) => {
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
     <div className="text-lg font-bold text-slate-900">최근 입금 내역</div>
 
+{selectedPayment ? (
+  <div className="mt-4 rounded-2xl bg-white p-4 border border-slate-200">
+    <div className="text-lg font-bold text-slate-900">선택한 입금 상세</div>
+
+    <div className="mt-2 text-sm text-slate-500">
+      입금일시: {formatDateTime(selectedPayment.created_at)}
+    </div>
+
+    <div className="mt-3 text-base text-slate-900 font-semibold">
+      입금액: {formatCurrency(selectedPayment.amount)}
+    </div>
+
+    {selectedPayment.memo ? (
+      <div className="mt-3 text-sm text-slate-600">
+        메모: {selectedPayment.memo}
+      </div>
+    ) : null}
+
+    <button
+      onClick={() => handleDeletePayment(selectedPayment.id)}
+      className="mt-4 w-full rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-bold text-red-600"
+    >
+      삭제
+    </button>
+  </div>
+) : null}
+
+    {isDeveloperMode && isDeveloperUnlocked && developerTargetCustomerId ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">거래처 정산 요약</div>
+    <p className="mt-2 text-sm text-slate-600">
+      선택한 거래처의 누적 주문/입금 현황입니다.
+    </p>
+
+    <div className="mt-3 space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-slate-600">누적 주문액</span>
+        <span className="font-semibold text-slate-900">
+          {formatCurrency(developerCustomerSummary.totalOrdered)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-slate-600">누적 입금액</span>
+        <span className="font-semibold text-slate-900">
+          {formatCurrency(developerCustomerSummary.totalPaid)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+        <span className="text-slate-900 font-bold">현재 미수금</span>
+        <span className="text-lg font-bold text-slate-900">
+          {formatCurrency(developerCustomerSummary.balance)}
+        </span>
+      </div>
+    </div>
+  </div>
+) : null}
+
+
     {recentPayments.length === 0 ? (
       <p className="mt-2 text-sm text-slate-500">아직 등록된 입금 내역이 없습니다.</p>
     ) : (
       <div className="mt-3 space-y-3">
-        {recentPayments.map((payment) => (
-          <div
-            key={payment.id}
-            className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-          >
-            <div className="flex items-center justify-between gap-3">
-  <div className="min-w-0">
-    <div className="text-sm font-semibold text-slate-900">
-      {getCustomerNameById(payment.customer_id)}
-    </div>
-    <div className="mt-1 text-xs text-slate-500">
-      {formatDateTime(payment.created_at)}
-    </div>
-  </div>
-
-  <div className="shrink-0 flex items-center gap-2">
-    <div className="text-right">
-      <div className="text-sm font-bold text-slate-900">
-        {formatCurrency(payment.amount)}
-      </div>
-    </div>
-
-    <button
-      type="button"
-      onClick={() => handleDeletePayment(payment.id)}
-      disabled={deletingPaymentId === payment.id}
-      className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 shadow-sm disabled:opacity-60"
-    >
-      {deletingPaymentId === payment.id ? "삭제 중..." : "삭제"}
-    </button>
-  </div>
-</div>
-            {payment.memo ? (
-              <div className="mt-2 text-sm text-slate-600">
-                메모: {payment.memo}
+        {pagedPayments.length === 0 ? (
+  <p className="mt-2 text-sm text-slate-500">아직 등록된 입금 내역이 없습니다.</p>
+) : (
+  <>
+    <div className="mt-3 space-y-3">
+      {pagedPayments.map((payment) => (
+        <button
+          key={payment.id}
+          type="button"
+          onClick={() => setSelectedPayment(payment)}
+          className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-900">
+                {formatDateTime(payment.created_at)}
               </div>
-            ) : null}
+              <div className="mt-1 text-xs text-slate-500">
+                {getCustomerNameById(payment.customer_id)}
+              </div>
+            </div>
+
+            <div className="shrink-0 text-right">
+              <div className="text-sm font-bold text-slate-900">
+                {formatCurrency(payment.amount)}
+              </div>
+            </div>
           </div>
-        ))}
+        </button>
+      ))}
+    </div>
+
+    <div className="mt-4 flex items-center justify-between">
+      <button
+        type="button"
+        onClick={() => setPaymentPage((prev) => Math.max(1, prev - 1))}
+        disabled={paymentPage === 1}
+        className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+      >
+        이전
+      </button>
+
+      <span className="text-sm text-slate-600">
+        {paymentPage} / {paymentTotalPages}
+      </span>
+
+      <button
+        type="button"
+        onClick={() => setPaymentPage((prev) => Math.min(paymentTotalPages, prev + 1))}
+        disabled={paymentPage === paymentTotalPages}
+        className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-50"
+      >
+        다음
+      </button>
+    </div>
+  </>
+)}
       </div>
     )}
   </div>
@@ -1155,21 +1295,10 @@ const formatDateTime = (value) => {
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
     <div className="text-lg font-bold text-slate-900">주문 내역 조회</div>
     <p className="mt-2 text-sm text-slate-600">
-      거래처를 선택하면 해당 거래처의 주문 내역만 최신순으로 표시됩니다.
+  위에서 선택한 거래처의 주문 내역을 최신순으로 표시합니다.
     </p>
 
-    <select
-      value={orderViewCustomerId}
-      onChange={(e) => setOrderViewCustomerId(e.target.value)}
-      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-    >
-      <option value="">조회할 거래처를 선택하세요</option>
-      {customers.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.name}
-        </option>
-      ))}
-    </select>
+    
   </div>
 ) : null}
 
@@ -1177,9 +1306,9 @@ const formatDateTime = (value) => {
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
     <div className="text-lg font-bold text-slate-900">주문 내역 목록</div>
 
-    {!orderViewCustomerId ? (
+{!developerCustomerId ? (
       <p className="mt-2 text-sm text-slate-500">
-        거래처를 선택하면 주문 내역이 표시됩니다.
+    위에서 거래처를 선택하면 주문 내역이 표시됩니다.
       </p>
     ) : pagedOrders.length === 0 ? (
       <p className="mt-2 text-sm text-slate-500">
