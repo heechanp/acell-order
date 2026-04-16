@@ -67,7 +67,7 @@ async function saveOrderToSupabase(payload) {
 
 async function fetchProductStatuses() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/product_status?select=product_id,customer_type,status`,
+    `${SUPABASE_URL}/rest/v1/product_status?select=product_id,status,updated_at`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -84,6 +84,8 @@ async function fetchProductStatuses() {
       errorBody = { message: await response.text() };
     }
 
+    console.error("상품 상태 조회 실패 응답:", errorBody);
+
     const error = new Error(errorBody?.message || "상품 상태 조회 실패");
     throw error;
   }
@@ -93,20 +95,23 @@ async function fetchProductStatuses() {
 
 
 async function saveProductStatusToSupabase({ productId, status }) {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/product_status`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify({
-  product_id: productId,
-  status,
-  updated_at: new Date().toISOString(),
-}),
-  });
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/product_status?on_conflict=product_id`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify({
+        product_id: productId,
+        status,
+        updated_at: new Date().toISOString(),
+      }),
+    }
+  );
 
   if (!response.ok) {
     let errorBody = null;
@@ -115,6 +120,8 @@ async function saveProductStatusToSupabase({ productId, status }) {
     } catch {
       errorBody = { message: await response.text() };
     }
+
+    console.error("상품 상태 저장 실패 응답:", errorBody);
 
     const error = new Error(errorBody?.message || "상품 상태 저장 실패");
     throw error;
@@ -290,7 +297,7 @@ const [productStatus, setProductStatus] = useState({});
 
 
 const toggleProductStatus = async (productId) => {
-  const key = productId;
+  const key = String(productId);
   const currentStatus = productStatus[key] ?? "active";
   const nextStatus = currentStatus === "inactive" ? "active" : "inactive";
 
@@ -331,20 +338,20 @@ const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
 
 const productsWithStatus = products.map((product) => ({
   ...product,
-  status: productStatus[product.id] ?? product.status ?? "active",
+  status: productStatus[String(product.id)] ?? product.status ?? "active",
 }));
   
 
 useEffect(() => {
   async function loadProductStatuses() {
     try {
-      if (!isSupabaseConfigured()) return;
       const data = await fetchProductStatuses();
+      console.log("불러온 상품 상태:", data);
 
-     const mapped = {};
-data.forEach((row) => {
-  mapped[row.product_id] = row.status;
-});
+      const mapped = {};
+      data.forEach((row) => {
+        mapped[String(row.product_id)] = row.status;
+      });
 
       setProductStatus(mapped);
     } catch (error) {
@@ -583,7 +590,8 @@ useEffect(() => {
         };
       })
       .filter((item) => item.quantity > 0);
-  }, [quantities, products]);
+}, [quantities, productsWithStatus]);
+
 
   const totalAmount = useMemo(() => {
     return orderItems.reduce((sum, item) => sum + item.amount, 0);
