@@ -1569,8 +1569,13 @@ const formatDateTime = (value) => {
         <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur">
   <div className="mx-auto max-w-md px-4 py-4">
     {orderItems.length > 0 ? (
-      <div className="mb-3 max-h-48 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
-        <div className="mb-2 text-sm font-semibold text-slate-700">선택한 품목</div>
+      <div className="mb-3 max-h-60 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        
+        <div className="mb-2 text-sm font-semibold text-slate-700">선택한 품목
+  <span className="ml-2 text-xs text-slate-400">(스크롤 가능)</span>
+
+
+        </div>
 
         <div className="space-y-2">
           {orderItems.map((item) => (
