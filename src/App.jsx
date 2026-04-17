@@ -899,19 +899,24 @@ localStorage.removeItem("seedling-order-draft");
 };
 
   const resetOrder = () => {
-    setQuantities(
-      products.reduce((acc, product) => {
-        acc[product.id] = 0;
-        return acc;
-      }, {})
-    );
-    setMemo("");
-    setSubmitted(false);
-    setSearchTerm("");
-    setSaveError("");
-    setSubmittedAt("");   // 👈 이거 추가
-localStorage.removeItem("seedling-order-draft");
-  };
+  setQuantities(
+    products.reduce((acc, product) => {
+      acc[product.id] = 0;
+      return acc;
+    }, {})
+  );
+  setMemo("");
+  setSubmitted(false);
+  setSearchTerm("");
+  setSaveError("");
+  setSubmittedAt("");
+
+  setCustomItemName("");
+  setCustomItemAmount("");
+  setGuestItemAmounts({});
+
+  localStorage.removeItem("seedling-order-draft");
+};
 
   const toggleCategory = (category) => {
     setOpenCategories((prev) => ({
