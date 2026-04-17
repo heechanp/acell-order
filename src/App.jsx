@@ -865,18 +865,21 @@ localStorage.removeItem("seedling-order-draft");
     setSubmitted(true);
 
     await fetch("/api/send-order-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-  customerName: selectedCustomer.name,
-  submittedAt: formattedNow,
-  orderItems,
-  totalAmount,
-  totalQuantity,
-}),
-    });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    customerName: selectedCustomer.name,
+    submittedAt: formattedNow,
+    orderItems: payload.items,
+    totalAmount: payload.total_amount,
+    totalQuantity: payload.items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0
+    ),
+  }),
+});
 
     setSubmittedAt(formattedNow);
     setSubmitted(true);
