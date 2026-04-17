@@ -37,7 +37,7 @@ function isSupabaseConfigured() {
 
 async function fetchOrderById(orderId) {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo`,
+    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -94,6 +94,33 @@ async function updateOrderInSupabase(orderId, payload) {
   }
 
   return data;
+}
+
+async function deleteOrderFromSupabase(orderId) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        Prefer: "return=representation",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    throw new Error(errorBody?.message || "주문 삭제 실패");
+  }
+
+  return response;
 }
 
 async function saveOrderToSupabase(payload) {
@@ -219,7 +246,7 @@ async function fetchCustomers() {
 
 async function fetchOrders() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?select=id,customer_id,customer_name,items,total_amount,memo,created_at&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/orders?select=id,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason&order=created_at.desc`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -356,6 +383,9 @@ const [developerCustomerId, setDeveloperCustomerId] = useState("");
 
 const [productStatus, setProductStatus] = useState({});
 
+const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+const [cancelReason, setCancelReason] = useState("");
+
 
 const [isEditingOrder, setIsEditingOrder] = useState(false);
 
@@ -366,6 +396,8 @@ const [editingOrderMemo, setEditingOrderMemo] = useState("");
 const [editingReason, setEditingReason] = useState("");
 const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 const [showOriginalOrder, setShowOriginalOrder] = useState(false);
+
+const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
 const toggleProductStatus = async (productId) => {
   const key = String(productId);
@@ -565,6 +597,10 @@ useEffect(() => {
   setEditingOrderMemo(selectedOrder.memo || "");
   setEditingReason("");
   setShowOriginalOrder(false);
+
+  setIsCancellingOrder(false);
+setCancelReason("");
+
 }, [selectedOrder]);
 
 
@@ -696,6 +732,78 @@ const handleUpdateSelectedOrder = async () => {
     setIsUpdatingOrder(false);
   }
 };
+
+
+const handleCancelSelectedOrder = async () => {
+  if (!selectedOrder) return;
+
+  if (selectedOrder.is_cancelled) {
+    alert("이미 취소된 주문입니다.");
+    return;
+  }
+
+  if (!cancelReason.trim()) {
+    alert("취소 사유를 입력해주세요.");
+    return;
+  }
+
+  const ok = window.confirm("이 주문을 취소하시겠습니까?");
+  if (!ok) return;
+
+  try {
+    setIsSubmittingCancel(true);
+
+    await updateOrderInSupabase(selectedOrder.id, {
+      is_cancelled: true,
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: "developer",
+      cancel_reason: cancelReason.trim(),
+    });
+
+    await loadSummaryData();
+
+    const refreshed = await fetchOrderById(selectedOrder.id);
+    setSelectedOrder(refreshed);
+
+    setCancelReason("");
+
+    alert("주문이 취소되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("주문 취소에 실패했습니다.");
+  } finally {
+  setIsSubmittingCancel(false);
+  }
+};
+
+
+const handleDeleteSelectedOrder = async () => {
+  if (!selectedOrder) return;
+
+  if (!selectedOrder.is_cancelled) {
+    alert("취소된 주문만 삭제할 수 있습니다.");
+    return;
+  }
+
+  const ok = window.confirm(
+    "이 주문을 완전히 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다."
+  );
+  if (!ok) return;
+
+  try {
+    await deleteOrderFromSupabase(selectedOrder.id);
+
+    await loadSummaryData();
+
+    setSelectedOrder(null);
+
+    alert("주문이 완전히 삭제되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("주문 삭제에 실패했습니다.");
+  }
+};
+
 
   const [openCategories, setOpenCategories] = useState({
     "고추류": false,
@@ -917,8 +1025,12 @@ useEffect(() => {
   
 
   const totalOrdered = orders
-    .filter((order) => order.customer_id === selectedCustomer.id)
-    .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+  .filter(
+    (order) =>
+      order.customer_id === selectedCustomer.id &&
+      !order.is_cancelled
+  )
+  .reduce((sum, order) => sum + (order.total_amount || 0), 0);
 
   const totalPaid = payments
     .filter((payment) => payment.customer_id === selectedCustomer.id)
@@ -944,8 +1056,12 @@ const developerCustomerSummary = useMemo(() => {
   }
 
   const totalOrdered = orders
-    .filter((order) => String(order.customer_id) === String(developerTargetCustomerId))
-    .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+  .filter(
+    (order) =>
+      String(order.customer_id) === String(developerTargetCustomerId) &&
+      !order.is_cancelled
+  )
+  .reduce((sum, order) => sum + (order.total_amount || 0), 0);
 
   const totalPaid = payments
     .filter((payment) => String(payment.customer_id) === String(developerTargetCustomerId))
@@ -1465,9 +1581,33 @@ const formatDateTime = (value) => {
 {selectedReceiptOrder ? (
   <div className="mt-4 rounded-2xl bg-white p-4 border border-slate-200">
     <div className="text-lg font-bold text-slate-900">선택한 주문 명세서</div>
-    <div className="mt-2 text-sm text-slate-500">
-      주문일시: {formatDateTime(selectedReceiptOrder.created_at)}
+
+{/* 🔴 여기 추가 */}
+{selectedOrder?.is_cancelled ? (
+  <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+    <div className="font-semibold">취소된 주문입니다.</div>
+    <div className="mt-1">
+      취소일시: {formatDateTime(selectedOrder.cancelled_at)}
     </div>
+    {selectedOrder.cancel_reason ? (
+      <div className="mt-1">사유: {selectedOrder.cancel_reason}</div>
+    ) : null}
+  </div>
+) : null}
+
+{selectedOrder?.is_edited ? (
+  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+    <div className="font-semibold">수정된 주문입니다.</div>
+    <div className="mt-1">최종 수정일시: {formatDateTime(selectedOrder.edited_at)}</div>
+    {selectedOrder.edit_reason ? (
+      <div className="mt-1">수정 사유: {selectedOrder.edit_reason}</div>
+    ) : null}
+  </div>
+) : null}
+
+<div className="mt-2 text-sm text-slate-500">
+  주문일시: {formatDateTime(selectedOrder.created_at)}
+</div>
 
     <div className="mt-4 space-y-2">
       {(selectedReceiptOrder.items || []).map((item, index) => (
@@ -1820,17 +1960,34 @@ const formatDateTime = (value) => {
                 key={order.id}
                 type="button"
                 onClick={() => setSelectedOrder(order)}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm"
+                className={`w-full rounded-2xl border p-4 text-left shadow-sm transition
+  ${
+    order.is_cancelled
+      ? "border-red-200 bg-red-50 opacity-60"
+      : "border-slate-200 bg-slate-50"
+  }
+`}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900">
-                      {order.customer_name || getCustomerNameById(order.customer_id)}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {formatDateTime(order.created_at)}
-                    </div>
-                  </div>
+                  
+<div className="min-w-0">
+  <div className="flex items-center gap-2">
+    <div className="text-sm font-semibold text-slate-900">
+      {order.customer_name || getCustomerNameById(order.customer_id)}
+    </div>
+
+    {order.is_cancelled ? (
+      <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+        취소됨
+      </span>
+    ) : null}
+  </div>
+
+  <div className="mt-1 text-xs text-slate-500">
+    {formatDateTime(order.created_at)}
+  </div>
+</div>
+
                   <div className="shrink-0 text-right">
                     <div className="text-sm font-bold text-slate-900">
                       {formatCurrency(order.total_amount || 0)}
@@ -1892,14 +2049,73 @@ const formatDateTime = (value) => {
     </div>
 
 
-{!isEditingOrder ? (
-  <button
-    type="button"
-    onClick={startEditSelectedOrder}
-    className="mt-3 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900"
-  >
-    수정하기
-  </button>
+{!isEditingOrder && !selectedOrder?.is_cancelled ? (
+  
+  <div className="mt-3 flex gap-2">
+    <button
+      type="button"
+      onClick={startEditSelectedOrder}
+      className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900"
+    >
+      수정하기
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setIsCancellingOrder(true)}
+      className="flex-1 rounded-2xl border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600"
+    >
+      주문취소
+    </button>
+  </div>
+) : null}
+
+{selectedOrder?.is_cancelled ? (
+  <div className="mt-3">
+    <button
+      type="button"
+      onClick={handleDeleteSelectedOrder}
+      className="w-full rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-bold text-red-600"
+    >
+      완전 삭제
+    </button>
+  </div>
+) : null}
+
+{isCancellingOrder ? (
+  <div className="mt-4 space-y-3">
+    <div>
+      <div className="mb-2 text-sm font-semibold text-slate-700">취소 사유</div>
+      <textarea
+        value={cancelReason}
+        onChange={(e) => setCancelReason(e.target.value)}
+        placeholder="예: 거래처 요청으로 주문 취소"
+        className="min-h-[90px] w-full rounded-2xl border border-slate-300 p-4 text-base outline-none focus:ring-2 focus:ring-slate-300 resize-none"
+      />
+    </div>
+
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          setIsCancellingOrder(false);
+          setCancelReason("");
+        }}
+        className="flex-1 rounded-2xl border border-slate-300 py-3 font-bold"
+      >
+        취소
+      </button>
+
+      <button
+  type="button"
+  onClick={handleCancelSelectedOrder}
+  disabled={isSubmittingCancel}
+  className="flex-1 rounded-2xl bg-red-600 text-white py-3 font-bold disabled:opacity-60"
+>
+  {isSubmittingCancel ? "취소 처리 중..." : "취소 확정"}
+</button>
+    </div>
+  </div>
 ) : null}
 
     <div className="mt-4 space-y-3">
