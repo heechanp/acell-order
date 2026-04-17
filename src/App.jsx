@@ -1354,7 +1354,7 @@ customer_name: isManualCustomerOrder
   ? [{
       category: "기타",
       name: customItemName || "기타",
-      quantity: 1,
+      quantity: 0,
       unit: "건",
       unit_price: Number(customItemAmount),
       amount: Number(customItemAmount)
