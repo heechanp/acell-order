@@ -736,6 +736,39 @@ const handleUpdateSelectedOrder = async () => {
     const refreshedOrder = await fetchOrderById(selectedOrder.id);
     setSelectedOrder(refreshedOrder);
 
+   try {
+  const mailRes = await fetch("/api/send-order-email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "updated",
+      customerName: refreshedOrder.customer_name,
+      submittedAt: formatDateTime(refreshedOrder.created_at),
+      orderNumber: refreshedOrder.order_number,
+      orderItems: refreshedOrder.items,
+      totalAmount: refreshedOrder.total_amount,
+      totalQuantity: (refreshedOrder.items || []).reduce(
+        (sum, item) => sum + Number(item.quantity || 0),
+        0
+      ),
+      memo: refreshedOrder.memo,
+      editReason: refreshedOrder.edit_reason,
+      editedAt: formatDateTime(refreshedOrder.edited_at),
+    }),
+  });
+
+  // 🔥 여기 추가 (핵심)
+  if (!mailRes.ok) {
+    const errorText = await mailRes.text();
+    console.error("메일 발송 실패:", errorText);
+  }
+
+} catch (mailError) {
+  console.error("수정 메일 발송 실패:", mailError);
+}
+
     setIsEditingOrder(false);
     setEditingReason("");
 
@@ -779,6 +812,39 @@ const handleCancelSelectedOrder = async () => {
 
     const refreshed = await fetchOrderById(selectedOrder.id);
     setSelectedOrder(refreshed);
+
+    try {
+  const mailRes = await fetch("/api/send-order-email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "cancelled",
+      customerName: refreshed.customer_name,
+      submittedAt: formatDateTime(refreshed.created_at),
+      orderNumber: refreshed.order_number,
+      orderItems: refreshed.items,
+      totalAmount: refreshed.total_amount,
+      totalQuantity: (refreshed.items || []).reduce(
+        (sum, item) => sum + Number(item.quantity || 0),
+        0
+      ),
+      memo: refreshed.memo,
+      cancelReason: refreshed.cancel_reason,
+      cancelledAt: formatDateTime(refreshed.cancelled_at),
+    }),
+  });
+
+  // 🔥 핵심
+  if (!mailRes.ok) {
+    const errorText = await mailRes.text();
+    console.error("취소 메일 발송 실패:", errorText);
+  }
+
+} catch (mailError) {
+  console.error("취소 메일 네트워크 에러:", mailError);
+}
 
     setCancelReason("");
 
@@ -1301,6 +1367,7 @@ const orderNumber = generateOrderNumber();
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
+      type: "created",
   customerName: selectedCustomer.name,
   submittedAt: formattedNow,
   orderNumber: payload.order_number,
