@@ -412,6 +412,8 @@ const [editingReason, setEditingReason] = useState("");
 const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 const [showOriginalOrder, setShowOriginalOrder] = useState(false);
 
+const [manualCustomerName, setManualCustomerName] = useState("");
+
 const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
 const toggleProductStatus = async (productId) => {
@@ -929,6 +931,9 @@ const [customItemAmount, setCustomItemAmount] = useState("");
 const [guestItemAmounts, setGuestItemAmounts] = useState({});
 const isGuestOrder = selectedCustomer?.name === "비회원주문";
 
+const isManualCustomerOrder = selectedCustomerId === "manual";
+
+
   useEffect(() => {
   if (!selectedCustomer) return;
   if (!isDraftRestored) return;
@@ -1023,7 +1028,13 @@ const filteredOrdersForView = useMemo(() => {
   if (!developerCustomerId) return [];
 
   return orders
-    .filter((order) => String(order.customer_id) === String(developerCustomerId))
+    .filter((order) => {
+      if (developerCustomerId === "manual") {
+        return order.customer_id == null;
+      }
+
+      return String(order.customer_id) === String(developerCustomerId);
+    })
     .slice()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }, [orders, developerCustomerId]);
@@ -1137,16 +1148,27 @@ const developerCustomerSummary = useMemo(() => {
   }
 
   const totalOrdered = orders
-  .filter(
-    (order) =>
-      String(order.customer_id) === String(developerTargetCustomerId) &&
-      !order.is_cancelled
-  )
-  .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    .filter((order) => {
+      if (developerTargetCustomerId === "manual") {
+        return order.customer_id == null && !order.is_cancelled;
+      }
 
-  const totalPaid = payments
-    .filter((payment) => String(payment.customer_id) === String(developerTargetCustomerId))
-    .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+      return (
+        String(order.customer_id) === String(developerTargetCustomerId) &&
+        !order.is_cancelled
+      );
+    })
+    .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+
+  const totalPaid =
+    developerTargetCustomerId === "manual"
+      ? 0
+      : payments
+          .filter(
+            (payment) =>
+              String(payment.customer_id) === String(developerTargetCustomerId)
+          )
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
   return {
     totalOrdered,
@@ -1278,15 +1300,22 @@ const handleDeletePayment = async (paymentId) => {
 
 
 const handleSubmit = async () => {
-  if (!selectedCustomer) {
-    alert("거래처를 선택해주세요.");
-    return;
-  }
+if (!selectedCustomer && !isManualCustomerOrder) {
+  alert("거래처를 선택해주세요.");
+  return;
+}
 
-  if (orderItems.length === 0) {
-    alert("최소 1개 품목 이상 수량을 입력해주세요.");
-    return;
-  }
+if (isManualCustomerOrder && !manualCustomerName.trim()) {
+  alert("거래처 이름을 입력해주세요.");
+  return;
+}
+  const hasGuestCustomAmount = isGuestOrder && Number(customItemAmount || 0) > 0;
+const hasNormalOrderItems = orderItems.length > 0;
+
+if (!hasNormalOrderItems && !hasGuestCustomAmount) {
+  alert("최소 1개 품목 이상 수량을 입력해주세요.");
+  return;
+}
 
   setSaveError("");
 
@@ -1303,8 +1332,11 @@ const orderNumber = generateOrderNumber();
   const payload = {
       order_number: orderNumber,
 
-  customer_id: selectedCustomer.id,
-  customer_name: selectedCustomer.name,
+  customer_id: isManualCustomerOrder ? null : selectedCustomer.id,
+customer_name: isManualCustomerOrder
+  ? manualCustomerName.trim()
+  : selectedCustomer.name,
+
   items: [
   ...orderItems.map((item) => {
     const guestAmount = Number(guestItemAmounts[item.id] || 0);
@@ -1318,16 +1350,16 @@ const orderNumber = generateOrderNumber();
       amount: isGuestOrder ? guestAmount * item.quantity : item.amount
     };
   }),
-  ...(isGuestOrder && customItemAmount
-    ? [{
-        category: "기타",
-        name: customItemName || "기타",
-        quantity: 1,
-        unit: "건",
-        unit_price: Number(customItemAmount),
-        amount: Number(customItemAmount)
-      }]
-    : [])
+  ...(isGuestOrder && Number(customItemAmount || 0) > 0
+  ? [{
+      category: "기타",
+      name: customItemName || "기타",
+      quantity: 1,
+      unit: "건",
+      unit_price: Number(customItemAmount),
+      amount: Number(customItemAmount)
+    }]
+  : [])
 ],
   total_amount: totalAmount,
   memo: memo || null
@@ -1368,7 +1400,9 @@ const orderNumber = generateOrderNumber();
   },
   body: JSON.stringify({
       type: "created",
-  customerName: selectedCustomer.name,
+  customerName: isManualCustomerOrder
+  ? manualCustomerName.trim()
+  : selectedCustomer.name,
   submittedAt: formattedNow,
   orderNumber: payload.order_number,
   orderItems: payload.items,
@@ -1414,6 +1448,8 @@ const orderNumber = generateOrderNumber();
   setCustomItemName("");
   setCustomItemAmount("");
   setGuestItemAmounts({});
+
+  setManualCustomerName("");
 
   localStorage.removeItem("seedling-order-draft");
 };
@@ -1504,7 +1540,9 @@ const formatDateTime = (value) => {
             <div className="text-4xl mb-3">✅</div>
             <h1 className="text-2xl font-bold text-slate-900">주문이 접수되었습니다</h1>
             <p className="mt-2 text-slate-600 leading-relaxed">
-              거래처 <span className="font-semibold text-slate-900">{selectedCustomer?.name}</span> 주문이 저장되었습니다.
+              거래처 <span className="font-semibold text-slate-900">
+                {isManualCustomerOrder ? manualCustomerName : selectedCustomer?.name}
+                </span> 주문이 저장되었습니다.
               <br />담당자가 확인 후 연락드릴게요.
             </p>
             
@@ -1797,18 +1835,49 @@ const formatDateTime = (value) => {
   </label>
 
   <select
-    value={selectedCustomerId}
-    onChange={(e) => setSelectedCustomerId(e.target.value)}
-    className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-lg font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-  >
-    <option value="">거래처를 선택하세요</option>
-    {sortedCustomers.map((c) => (
+  value={selectedCustomerId}
+  onChange={(e) => setSelectedCustomerId(e.target.value)}
+  className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-lg font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+>
+  <option value="">거래처를 선택하세요</option>
+
+  {/* 1️⃣ 비회원 먼저 */}
+  {sortedCustomers
+    .filter((c) => c.name?.includes("비회원주문"))
+    .map((c) => (
       <option key={c.id} value={c.id}>
         {c.name}
       </option>
     ))}
-  </select>
+
+  {/* 2️⃣ 수동 주문 */}
+  <option value="manual">거래처 수동주문</option>
+
+  {/* 3️⃣ 나머지 */}
+  {sortedCustomers
+    .filter((c) => !c.name?.includes("비회원주문"))
+    .map((c) => (
+      <option key={c.id} value={c.id}>
+        {c.name}
+      </option>
+    ))}
+</select>
 </div>
+
+{isManualCustomerOrder ? (
+  <div className="mt-3">
+    <label className="mb-2 block text-sm font-medium text-slate-600">
+      거래처 이름
+    </label>
+    <input
+      type="text"
+      value={manualCustomerName}
+      onChange={(e) => setManualCustomerName(e.target.value)}
+      placeholder="거래처 이름을 입력하세요"
+      className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    />
+  </div>
+) : null}
 
 {selectedCustomer && isDeveloperMode ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
@@ -1849,18 +1918,19 @@ const formatDateTime = (value) => {
 
 
 
-    <select
-      value={developerCustomerId}
-      onChange={(e) => setDeveloperCustomerId(e.target.value)}
-      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-    >
-      <option value="">거래처를 선택하세요</option>
-       {sortedCustomers.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-    </select>
+   <select
+  value={developerCustomerId}
+  onChange={(e) => setDeveloperCustomerId(e.target.value)}
+  className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+>
+  <option value="">거래처를 선택하세요</option>
+  <option value="manual">거래처 수동 주문</option>
+  {sortedCustomers.map((c) => (
+    <option key={c.id} value={c.id}>
+      {c.name}
+    </option>
+  ))}
+</select>
   </div>
 ) : null}
 
