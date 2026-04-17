@@ -450,6 +450,11 @@ useEffect(() => {
 const [payments, setPayments] = useState([]);
 const [isDraftRestored, setIsDraftRestored] = useState(false);
 
+const [customItemName, setCustomItemName] = useState("");
+const [customItemAmount, setCustomItemAmount] = useState("");
+const [guestItemAmounts, setGuestItemAmounts] = useState({});
+const isGuestOrder = selectedCustomer?.name === "비회원주문";
+
   useEffect(() => {
   if (!selectedCustomer) return;
   if (!isDraftRestored) return;
@@ -602,8 +607,12 @@ useEffect(() => {
 
 
   const totalAmount = useMemo(() => {
-    return orderItems.reduce((sum, item) => sum + item.amount, 0);
-  }, [orderItems]);
+  if (isGuestOrder) {
+    return Number(customItemAmount || 0);
+  }
+
+  return orderItems.reduce((sum, item) => sum + item.amount, 0);
+}, [orderItems, isGuestOrder, customItemAmount]);
 
   const selectedCustomerSummary = useMemo(() => {
   if (!selectedCustomer) {
@@ -805,9 +814,10 @@ localStorage.removeItem("seedling-order-draft");
 
 
   const payload = {
-    customer_id: selectedCustomer.id,
-    customer_name: selectedCustomer.name,
-    items: orderItems.map((item) => ({
+  customer_id: selectedCustomer.id,
+  customer_name: selectedCustomer.name,
+  items: [
+    ...orderItems.map((item) => ({
       category: item.category,
       name: item.name,
       quantity: item.quantity,
@@ -815,9 +825,20 @@ localStorage.removeItem("seedling-order-draft");
       unit_price: item.price,
       amount: item.amount
     })),
-    total_amount: totalAmount,
-    memo: memo || null
-  };
+    ...(isGuestOrder && customItemAmount
+      ? [{
+          category: "기타",
+          name: customItemName || "기타",
+          quantity: 1,
+          unit: "건",
+          unit_price: Number(customItemAmount),
+          amount: Number(customItemAmount)
+        }]
+      : [])
+  ],
+  total_amount: totalAmount,
+  memo: memo || null
+};
 
   try {
     if (isSupabaseConfigured()) {
@@ -1039,6 +1060,8 @@ const formatDateTime = (value) => {
   </div>
 </div>
             {memo ? (
+
+              
               <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-sm text-slate-700">
                 <div className="font-semibold mb-1">요청사항</div>
                 <div>{memo}</div>
@@ -1639,8 +1662,8 @@ const formatDateTime = (value) => {
   <div>
     <div className="text-xl font-bold text-slate-900">{product.name}</div>
     <div className="mt-1 text-sm text-slate-500">
-      {formatCurrency(product.price)} / {product.unit}
-    </div>
+  {isGuestOrder ? product.unit : `${formatCurrency(product.price)} / ${product.unit}`}
+</div>
 
     
 
@@ -1662,9 +1685,29 @@ const formatDateTime = (value) => {
   </div>
 
   <div className="text-right">
-    <div className="text-xs text-slate-400">금액</div>
-    <div className="text-lg font-bold text-slate-900">{formatCurrency(amount)}</div>
-  </div>
+  <div className="text-xs text-slate-400">금액</div>
+
+  {isGuestOrder ? (
+    <input
+      type="number"
+      min="0"
+      inputMode="numeric"
+      value={guestItemAmounts[product.id] || ""}
+      onChange={(e) =>
+        setGuestItemAmounts((prev) => ({
+          ...prev,
+          [product.id]: e.target.value,
+        }))
+      }
+      placeholder="금액 입력"
+      className="mt-1 h-10 w-28 rounded-xl border border-slate-300 px-3 text-right text-base font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    />
+  ) : (
+    <div className="text-lg font-bold text-slate-900">
+      {formatCurrency(amount)}
+    </div>
+  )}
+</div>
 </div>
 
                        <div className="mt-4 flex min-w-0 items-center gap-2">
@@ -1706,6 +1749,30 @@ const formatDateTime = (value) => {
               </div>
             );
           })}
+
+{isGuestOrder ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+    <div className="text-lg font-bold text-slate-900">기타 직접 입력</div>
+
+    <input
+      type="text"
+      value={customItemName}
+      onChange={(e) => setCustomItemName(e.target.value)}
+      placeholder="예: 치마상추 15포기"
+      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    />
+
+    <input
+      type="number"
+      min="0"
+      inputMode="numeric"
+      value={customItemAmount}
+      onChange={(e) => setCustomItemAmount(e.target.value)}
+      placeholder="금액 직접 입력"
+      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    />
+  </div>
+) : null}
 
           <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
             <div className="text-lg font-bold text-slate-900">요청사항</div>
