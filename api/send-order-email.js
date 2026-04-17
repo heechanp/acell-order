@@ -12,7 +12,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { customerName, submittedAt, orderItems, totalAmount, totalQuantity, memo } = req.body;
+    const {
+  customerName,
+  submittedAt,
+  orderNumber,   // 🔥 이거 추가
+  orderItems,
+  totalAmount,
+  totalQuantity,
+  memo
+} = req.body;
 
     const itemsHtml = (orderItems || [])
       .map(
@@ -31,6 +39,7 @@ export default async function handler(req, res) {
       <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;">
         <h2 style="margin:0 0 16px;">새 주문이 접수되었습니다</h2>
         <p><strong>거래처:</strong> ${customerName}</p>
+        <p><strong>주문번호:</strong> ${orderNumber || "-"}</p>
         <p><strong>주문일시:</strong> ${submittedAt}</p>
 
         <table style="width:100%;border-collapse:collapse;margin-top:16px;">

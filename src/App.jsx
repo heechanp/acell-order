@@ -1268,15 +1268,28 @@ const orderNumber = generateOrderNumber();
 };
 
   try {
-    if (isSupabaseConfigured()) {
-      await saveOrderToSupabase(payload);
-        await loadSummaryData();
+  if (isSupabaseConfigured()) {
+    const savedOrders = await saveOrderToSupabase(payload);
+    await loadSummaryData();
 
+    if (Array.isArray(savedOrders) && savedOrders.length > 0) {
+      setSelectedReceiptOrder(savedOrders[0]);
     } else {
-      console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
+      setSelectedReceiptOrder({
+        ...payload,
+        created_at: new Date().toISOString(),
+      });
     }
+  } else {
+    console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
 
-    const now = new Date();
+    setSelectedReceiptOrder({
+      ...payload,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  const now = new Date();
     const formattedNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     setSubmittedAt(formattedNow);
@@ -1290,6 +1303,7 @@ const orderNumber = generateOrderNumber();
   body: JSON.stringify({
   customerName: selectedCustomer.name,
   submittedAt: formattedNow,
+  orderNumber: payload.order_number,
   orderItems: payload.items,
   totalAmount: payload.total_amount,
   totalQuantity: payload.items.reduce(
@@ -1439,7 +1453,12 @@ const formatDateTime = (value) => {
 
           <div ref={receiptRef} className="mt-6 rounded-2xl bg-slate-50 p-4 pb-8 border border-slate-200">
   <div className="text-sm text-slate-500">주문 내역</div>
+
+   <div className="mt-1 text-sm text-slate-400">
+    주문번호: {selectedReceiptOrder?.order_number || "-"}
+  </div>
   {submittedAt ? (
+
     <div className="mt-1 text-sm text-slate-400">주문일시: {submittedAt}</div>
   ) : null}
             <div className="mt-3 space-y-2">
@@ -1601,30 +1620,34 @@ const formatDateTime = (value) => {
     <div className="text-lg font-bold text-slate-900">선택한 주문 명세서</div>
 
 {/* 🔴 여기 추가 */}
-{selectedOrder?.is_cancelled ? (
+{selectedReceiptOrder?.is_cancelled ? (
   <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
     <div className="font-semibold">취소된 주문입니다.</div>
     <div className="mt-1">
-      취소일시: {formatDateTime(selectedOrder.cancelled_at)}
+      취소일시: {formatDateTime(selectedReceiptOrder.cancelled_at)}
     </div>
-    {selectedOrder.cancel_reason ? (
-      <div className="mt-1">사유: {selectedOrder.cancel_reason}</div>
+    {selectedReceiptOrder.cancel_reason ? (
+      <div className="mt-1">사유: {selectedReceiptOrder.cancel_reason}</div>
     ) : null}
   </div>
 ) : null}
 
-{selectedOrder?.is_edited ? (
+{selectedReceiptOrder?.is_edited ? (
   <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
     <div className="font-semibold">수정된 주문입니다.</div>
-    <div className="mt-1">최종 수정일시: {formatDateTime(selectedOrder.edited_at)}</div>
-    {selectedOrder.edit_reason ? (
-      <div className="mt-1">수정 사유: {selectedOrder.edit_reason}</div>
+    <div className="mt-1">최종 수정일시: {formatDateTime(selectedReceiptOrder.edited_at)}</div>
+    {selectedReceiptOrder.edit_reason ? (
+      <div className="mt-1">수정 사유: {selectedReceiptOrder.edit_reason}</div>
     ) : null}
   </div>
 ) : null}
 
 <div className="mt-2 text-sm text-slate-500">
-  주문일시: {formatDateTime(selectedOrder.created_at)}
+  주문번호: {selectedReceiptOrder.order_number || "-"}
+</div>
+
+<div className="mt-2 text-sm text-slate-500">
+  주문일시: {formatDateTime(selectedReceiptOrder.created_at)}
 </div>
 
     <div className="mt-4 space-y-2">
@@ -2002,6 +2025,10 @@ const formatDateTime = (value) => {
   </div>
 
   <div className="mt-1 text-xs text-slate-500">
+    주문번호: {order.order_number || "-"}
+  </div>
+
+  <div className="mt-1 text-xs text-slate-500">
     {formatDateTime(order.created_at)}
   </div>
 </div>
@@ -2061,6 +2088,12 @@ const formatDateTime = (value) => {
     ) : null}
   </div>
 ) : null}
+
+
+
+<div className="mt-2 text-sm text-slate-500">
+  주문번호: {selectedOrder.order_number || "-"}
+</div>
 
     <div className="mt-2 text-sm text-slate-500">
       주문일시: {formatDateTime(selectedOrder.created_at)}
