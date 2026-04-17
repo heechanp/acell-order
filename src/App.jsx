@@ -608,11 +608,16 @@ useEffect(() => {
 
   const totalAmount = useMemo(() => {
   if (isGuestOrder) {
-    return Number(customItemAmount || 0);
+    const guestProductsTotal = orderItems.reduce(
+      (sum, item) => sum + Number(guestItemAmounts[item.id] || 0),
+      0
+    );
+
+    return guestProductsTotal + Number(customItemAmount || 0);
   }
 
   return orderItems.reduce((sum, item) => sum + item.amount, 0);
-}, [orderItems, isGuestOrder, customItemAmount]);
+}, [orderItems, isGuestOrder, guestItemAmounts, customItemAmount]);
 
   const selectedCustomerSummary = useMemo(() => {
   if (!selectedCustomer) {
@@ -817,25 +822,29 @@ localStorage.removeItem("seedling-order-draft");
   customer_id: selectedCustomer.id,
   customer_name: selectedCustomer.name,
   items: [
-    ...orderItems.map((item) => ({
+  ...orderItems.map((item) => {
+    const guestAmount = Number(guestItemAmounts[item.id] || 0);
+
+    return {
       category: item.category,
       name: item.name,
       quantity: item.quantity,
       unit: item.unit,
-      unit_price: item.price,
-      amount: item.amount
-    })),
-    ...(isGuestOrder && customItemAmount
-      ? [{
-          category: "기타",
-          name: customItemName || "기타",
-          quantity: 1,
-          unit: "건",
-          unit_price: Number(customItemAmount),
-          amount: Number(customItemAmount)
-        }]
-      : [])
-  ],
+      unit_price: isGuestOrder ? guestAmount : item.price,
+      amount: isGuestOrder ? guestAmount : item.amount
+    };
+  }),
+  ...(isGuestOrder && customItemAmount
+    ? [{
+        category: "기타",
+        name: customItemName || "기타",
+        quantity: 1,
+        unit: "건",
+        unit_price: Number(customItemAmount),
+        amount: Number(customItemAmount)
+      }]
+    : [])
+],
   total_amount: totalAmount,
   memo: memo || null
 };
@@ -1007,19 +1016,40 @@ const formatDateTime = (value) => {
     <div className="mt-1 text-sm text-slate-400">주문일시: {submittedAt}</div>
   ) : null}
             <div className="mt-3 space-y-2">
-              {orderItems.map((item) => (
-  <div key={item.id} className="flex items-start justify-between gap-4 text-base">
-    <div className="text-slate-700">
-      <div className="font-medium text-slate-900">{item.name}</div>
-      <div className="mt-1 text-sm text-slate-500">
-        {formatCurrency(item.price)} × {item.quantity}{item.unit}
+              {orderItems.map((item) => {
+  const guestAmount = Number(guestItemAmounts[item.id] || 0);
+
+  return (
+    <div key={item.id} className="flex items-start justify-between gap-4 text-base">
+      <div className="text-slate-700">
+        <div className="font-medium text-slate-900">{item.name}</div>
+        <div className="mt-1 text-sm text-slate-500">
+          {isGuestOrder
+            ? `${item.quantity}${item.unit} / ${formatCurrency(guestAmount)}`
+            : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
+        </div>
       </div>
+
+      <span className="font-semibold text-slate-900 whitespace-nowrap">
+        {isGuestOrder ? formatCurrency(guestAmount) : formatCurrency(item.amount)}
+      </span>
     </div>
+  );
+})}
+
+{isGuestOrder && customItemAmount ? (
+  <div className="flex items-start justify-between gap-4 text-base">
+    <div className="text-slate-700">
+      <div className="font-medium text-slate-900">{customItemName || "기타"}</div>
+      <div className="mt-1 text-sm text-slate-500">기타</div>
+    </div>
+
     <span className="font-semibold text-slate-900 whitespace-nowrap">
-      {formatCurrency(item.amount)}
+      {formatCurrency(Number(customItemAmount))}
     </span>
   </div>
-))}
+) : null}
+
             </div>
             <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
   <div className="flex items-center justify-between">
@@ -1032,6 +1062,17 @@ const formatDateTime = (value) => {
     <span className="text-xl font-bold text-slate-900">{formatCurrency(totalAmount)}</span>
   </div>
 </div>
+
+
+            {memo ? (
+
+              
+              <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-sm text-slate-700">
+                <div className="font-semibold mb-1">요청사항</div>
+                <div>{memo}</div>
+              </div>
+            ) : null}
+          </div>
 
 <div className="mt-4 pt-4 border-t border-slate-200">
   <div className="text-sm font-semibold text-slate-700 mb-2">거래처 정산 현황</div>
@@ -1059,15 +1100,6 @@ const formatDateTime = (value) => {
     </div>
   </div>
 </div>
-            {memo ? (
-
-              
-              <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-sm text-slate-700">
-                <div className="font-semibold mb-1">요청사항</div>
-                <div>{memo}</div>
-              </div>
-            ) : null}
-          </div>
 
       <div className="mt-4 pt-4 border-t border-slate-200">
   <div className="text-sm font-semibold text-slate-700 mb-2">최근 주문 내역</div>
@@ -1280,7 +1312,7 @@ const formatDateTime = (value) => {
       className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
     >
       <option value="">거래처를 선택하세요</option>
-      + {sortedCustomers.map((c) => (
+       {sortedCustomers.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
