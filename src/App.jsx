@@ -1271,15 +1271,16 @@ localStorage.removeItem("seedling-order-draft");
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    customerName: selectedCustomer.name,
-    submittedAt: formattedNow,
-    orderItems: payload.items,
-    totalAmount: payload.total_amount,
-    totalQuantity: payload.items.reduce(
-      (sum, item) => sum + Number(item.quantity || 0),
-      0
-    ),
-  }),
+  customerName: selectedCustomer.name,
+  submittedAt: formattedNow,
+  orderItems: payload.items,
+  totalAmount: payload.total_amount,
+  totalQuantity: payload.items.reduce(
+    (sum, item) => sum + Number(item.quantity || 0),
+    0
+  ),
+  memo: payload.memo,
+}),
 });
 
     setSubmittedAt(formattedNow);
