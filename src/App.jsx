@@ -1105,35 +1105,46 @@ useEffect(() => {
 }, [orderItems, isGuestOrder, guestItemAmounts, customItemAmount]);
 
   const selectedCustomerSummary = useMemo(() => {
+  if (isManualCustomerOrder) {
+    const totalOrdered = orders
+      .filter((order) => order.customer_id == null && !order.is_cancelled)
+      .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+
+    return {
+      totalOrdered,
+      totalPaid: 0,
+      balance: totalOrdered,
+    };
+  }
+
   if (!selectedCustomer) {
     return {
       totalOrdered: 0,
       totalPaid: 0,
-      balance: 0
+      balance: 0,
     };
   }
 
-
-  
-
   const totalOrdered = orders
-  .filter(
-    (order) =>
-      order.customer_id === selectedCustomer.id &&
-      !order.is_cancelled
-  )
-  .reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    .filter(
+      (order) =>
+        String(order.customer_id) === String(selectedCustomer.id) &&
+        !order.is_cancelled
+    )
+    .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
 
   const totalPaid = payments
-    .filter((payment) => payment.customer_id === selectedCustomer.id)
-    .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    .filter(
+      (payment) => String(payment.customer_id) === String(selectedCustomer.id)
+    )
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
   return {
     totalOrdered,
     totalPaid,
-    balance: totalOrdered - totalPaid
+    balance: totalOrdered - totalPaid,
   };
-}, [selectedCustomer, orders, payments]);
+}, [isManualCustomerOrder, selectedCustomer, orders, payments]);
 
 
 const developerTargetCustomerId = developerCustomerId || "";
@@ -1180,13 +1191,20 @@ const developerCustomerSummary = useMemo(() => {
 const RECEIPT_ORDERS_PER_PAGE = 5;
 
 const recentOrdersForCustomer = useMemo(() => {
+  if (isManualCustomerOrder) {
+    return orders
+      .filter((order) => order.customer_id == null)
+      .slice()
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+
   if (!selectedCustomer) return [];
 
   return orders
     .filter((order) => String(order.customer_id) === String(selectedCustomer.id))
     .slice()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-}, [orders, selectedCustomer]);
+}, [orders, selectedCustomer, isManualCustomerOrder]);
 
 const receiptTotalPages = Math.max(
   1,
