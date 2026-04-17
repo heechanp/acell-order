@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         (item) => `
           <tr>
             <td style="padding:8px;border:1px solid #ddd;">${item.name}</td>
-            <td style="padding:8px;border:1px solid #ddd;">${formatCurrency(item.price)}</td>
+<td style="padding:8px;border:1px solid #ddd;">${formatCurrency(item.unit_price)}</td>
             <td style="padding:8px;border:1px solid #ddd;">${item.quantity}${item.unit}</td>
             <td style="padding:8px;border:1px solid #ddd;">${formatCurrency(item.amount)}</td>
           </tr>
