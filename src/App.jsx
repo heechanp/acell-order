@@ -35,6 +35,67 @@ function isSupabaseConfigured() {
   );
 }
 
+async function fetchOrderById(orderId) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo`,
+    {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    let errorBody = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = { message: await response.text() };
+    }
+
+    const error = new Error(errorBody?.message || "주문 상세 조회 실패");
+    throw error;
+  }
+
+  const data = await response.json();
+  return data?.[0] || null;
+}
+
+async function updateOrderInSupabase(orderId, payload) {
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`,
+    {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const error = new Error(data?.message || "주문 수정 실패");
+    throw error;
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("주문이 수정되지 않았습니다. RLS UPDATE 정책을 확인해주세요.");
+  }
+
+  return data;
+}
+
 async function saveOrderToSupabase(payload) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
     method: "POST",
@@ -296,6 +357,16 @@ const [developerCustomerId, setDeveloperCustomerId] = useState("");
 const [productStatus, setProductStatus] = useState({});
 
 
+const [isEditingOrder, setIsEditingOrder] = useState(false);
+
+const [editItemSearchTerm, setEditItemSearchTerm] = useState("");
+
+const [editingOrderItems, setEditingOrderItems] = useState([]);
+const [editingOrderMemo, setEditingOrderMemo] = useState("");
+const [editingReason, setEditingReason] = useState("");
+const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+const [showOriginalOrder, setShowOriginalOrder] = useState(false);
+
 const toggleProductStatus = async (productId) => {
   const key = String(productId);
   const currentStatus = productStatus[key] ?? "active";
@@ -324,6 +395,24 @@ const toggleProductStatus = async (productId) => {
   }
 };
 
+const editingOrderSummary = useMemo(() => {
+  const baseItems = isEditingOrder ? editingOrderItems : (selectedOrder?.items || []);
+
+  const totalQty = baseItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const totalAmt = baseItems.reduce((sum, item) => {
+    const amount = isEditingOrder
+      ? Number(item.unit_price || 0) * Number(item.quantity || 0)
+      : Number(item.amount || 0);
+
+    return sum + amount;
+  }, 0);
+
+  return {
+    totalQty,
+    totalAmt,
+  };
+}, [isEditingOrder, editingOrderItems, selectedOrder]);
+
   const selectedCustomer = customers.find(
     (c) => String(c.id) === String(selectedCustomerId)
   );
@@ -349,6 +438,56 @@ const productsWithStatus = products.map((product) => ({
   status: productStatus[String(product.id)] ?? product.status ?? "active",
 }));
   
+const editableProducts = useMemo(() => {
+  return productsWithStatus.filter((product) => product.status !== "inactive");
+}, [productsWithStatus]);
+
+const filteredEditableProducts = useMemo(() => {
+  const keyword = editItemSearchTerm.trim().toLowerCase();
+  if (!keyword) return editableProducts;
+
+  return editableProducts.filter((product) =>
+    product.name.toLowerCase().includes(keyword) ||
+    product.category.toLowerCase().includes(keyword)
+  );
+}, [editItemSearchTerm, editableProducts]);
+
+
+const addItemToEditingOrder = (product) => {
+  setEditingOrderItems((prev) => {
+    const existingIndex = prev.findIndex(
+      (item) => item.name === product.name && item.unit_price === product.price
+    );
+
+    if (existingIndex >= 0) {
+      return prev.map((item, index) => {
+        if (index !== existingIndex) return item;
+
+        const nextQty = Number(item.quantity || 0) + 1;
+        return {
+          ...item,
+          quantity: nextQty,
+          amount: Number(item.unit_price || 0) * nextQty,
+        };
+      });
+    }
+
+    return [
+      ...prev,
+      {
+        category: product.category,
+        name: product.name,
+        quantity: 1,
+        unit: product.unit,
+        unit_price: product.price,
+        amount: product.price,
+      },
+    ];
+  });
+
+  setEditItemSearchTerm("");
+};
+
 
 useEffect(() => {
   async function loadProductStatuses() {
@@ -409,6 +548,152 @@ useEffect(() => {
   } catch (error) {
     console.error(error);
     alert("주문/입금 데이터를 불러오지 못했습니다.");
+  }
+};
+
+useEffect(() => {
+  if (!selectedOrder) {
+    setIsEditingOrder(false);
+    setEditingOrderItems([]);
+    setEditingOrderMemo("");
+    setEditingReason("");
+    setShowOriginalOrder(false);
+    return;
+  }
+
+  setEditingOrderItems(selectedOrder.items || []);
+  setEditingOrderMemo(selectedOrder.memo || "");
+  setEditingReason("");
+  setShowOriginalOrder(false);
+}, [selectedOrder]);
+
+
+const updateEditingItemQuantity = (index, nextQuantity) => {
+  const safeQty = Math.max(0, Number(nextQuantity) || 0);
+
+  setEditingOrderItems((prev) =>
+    prev.map((item, i) => {
+      if (i !== index) return item;
+
+      const unitPrice = Number(item.unit_price || 0);
+      return {
+        ...item,
+        quantity: safeQty,
+        amount: unitPrice * safeQty,
+      };
+    })
+  );
+};
+
+const removeEditingItem = (index) => {
+  setEditingOrderItems((prev) => prev.filter((_, i) => i !== index));
+};
+
+const startEditSelectedOrder = async () => {
+  if (!selectedOrder) return;
+
+  try {
+    const latestOrder = await fetchOrderById(selectedOrder.id);
+    if (!latestOrder) {
+      alert("주문 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    setSelectedOrder(latestOrder);
+    setEditingOrderItems(latestOrder.items || []);
+    setEditingOrderMemo(latestOrder.memo || "");
+    setEditingReason("");
+    setIsEditingOrder(true);
+  } catch (error) {
+    console.error(error);
+    alert("주문 정보를 불러오지 못했습니다.");
+  }
+};
+
+const cancelEditSelectedOrder = () => {
+  if (!selectedOrder) return;
+
+  setEditingOrderItems(selectedOrder.items || []);
+  setEditingOrderMemo(selectedOrder.memo || "");
+  setEditingReason("");
+  setIsEditingOrder(false);
+};
+
+const handleUpdateSelectedOrder = async () => {
+  if (!selectedOrder) return;
+
+  const cleanedItems = (editingOrderItems || [])
+    .map((item) => {
+      const quantity = Math.max(0, Number(item.quantity) || 0);
+      const unitPrice = Math.max(0, Number(item.unit_price) || 0);
+
+      return {
+        ...item,
+        quantity,
+        unit_price: unitPrice,
+        amount: quantity * unitPrice,
+      };
+    })
+    .filter((item) => item.quantity > 0);
+
+  if (cleanedItems.length === 0) {
+    alert("최소 1개 품목 이상 남아 있어야 합니다.");
+    return;
+  }
+
+  if (!editingReason.trim()) {
+    alert("수정 사유를 입력해주세요.");
+    return;
+  }
+
+  const nextTotalAmount = cleanedItems.reduce(
+    (sum, item) => sum + Number(item.amount || 0),
+    0
+  );
+
+  const ok = window.confirm("이 주문 내역을 수정할까요? 원본은 백업됩니다.");
+  if (!ok) return;
+
+  try {
+    setIsUpdatingOrder(true);
+
+    const latestOrder = await fetchOrderById(selectedOrder.id);
+    if (!latestOrder) {
+      alert("주문 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    const patchPayload = {
+      items: cleanedItems,
+      total_amount: nextTotalAmount,
+      memo: editingOrderMemo || null,
+      is_edited: true,
+      edited_at: new Date().toISOString(),
+      edited_by: "developer",
+      edit_reason: editingReason.trim(),
+    };
+
+    if (!latestOrder.is_edited) {
+      patchPayload.original_items = latestOrder.items || [];
+      patchPayload.original_total_amount = latestOrder.total_amount || 0;
+      patchPayload.original_memo = latestOrder.memo || null;
+    }
+
+    await updateOrderInSupabase(selectedOrder.id, patchPayload);
+    await loadSummaryData();
+
+    const refreshedOrder = await fetchOrderById(selectedOrder.id);
+    setSelectedOrder(refreshedOrder);
+
+    setIsEditingOrder(false);
+    setEditingReason("");
+
+    alert("주문 내역이 수정되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("주문 수정에 실패했습니다.");
+  } finally {
+    setIsUpdatingOrder(false);
   }
 };
 
@@ -1591,55 +1876,122 @@ const formatDateTime = (value) => {
 {isDeveloperMode && isDeveloperUnlocked && selectedOrder ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
     <div className="text-lg font-bold text-slate-900">선택한 주문 명세서</div>
+
+{selectedOrder?.is_edited ? (
+  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+    <div className="font-semibold">수정된 주문입니다.</div>
+    <div className="mt-1">최종 수정일시: {formatDateTime(selectedOrder.edited_at)}</div>
+    {selectedOrder.edit_reason ? (
+      <div className="mt-1">수정 사유: {selectedOrder.edit_reason}</div>
+    ) : null}
+  </div>
+) : null}
+
     <div className="mt-2 text-sm text-slate-500">
       주문일시: {formatDateTime(selectedOrder.created_at)}
     </div>
 
-    <div className="mt-4 space-y-2">
-      {(selectedOrder.items || []).map((item, index) => (
-        <div
-          key={`${selectedOrder.id}-${index}`}
-          className="flex items-start justify-between gap-4 text-base"
-        >
+
+{!isEditingOrder ? (
+  <button
+    type="button"
+    onClick={startEditSelectedOrder}
+    className="mt-3 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900"
+  >
+    수정하기
+  </button>
+) : null}
+
+    <div className="mt-4 space-y-3">
+  {(isEditingOrder ? editingOrderItems : selectedOrder.items || []).map((item, index) => (
+    <div
+      key={`${selectedOrder.id}-${index}`}
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+    >
+      {!isEditingOrder ? (
+        <div className="flex items-start justify-between gap-4 text-base">
           <div className="text-slate-700">
             <div className="font-medium text-slate-900">{item.name}</div>
             <div className="mt-1 text-sm text-slate-500">
               {formatCurrency(item.unit_price || 0)} × {item.quantity}{item.unit}
             </div>
           </div>
+
           <span className="font-semibold text-slate-900 whitespace-nowrap">
             {formatCurrency(item.amount || 0)}
           </span>
         </div>
-      ))}
+      ) : (
+        <>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="font-medium text-slate-900">{item.name}</div>
+              <div className="mt-1 text-sm text-slate-500">
+                단가 {formatCurrency(item.unit_price || 0)}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => removeEditingItem(index)}
+              className="rounded-xl border border-red-200 bg-white px-3 py-1 text-xs font-bold text-red-600"
+            >
+              삭제
+            </button>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => updateEditingItemQuantity(index, Number(item.quantity || 0) - 1)}
+              className="h-12 w-12 rounded-2xl border border-slate-300 bg-white text-xl font-bold text-slate-800"
+            >
+              -
+            </button>
+
+            <input
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={item.quantity}
+              onChange={(e) => updateEditingItemQuantity(index, e.target.value)}
+              className="h-12 min-w-0 flex-1 rounded-2xl border border-slate-300 text-center text-xl font-bold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+            />
+
+            <button
+              type="button"
+              onClick={() => updateEditingItemQuantity(index, Number(item.quantity || 0) + 1)}
+              className="h-12 w-12 rounded-2xl border border-slate-300 bg-white text-xl font-bold text-slate-800"
+            >
+              +
+            </button>
+          </div>
+
+          <div className="mt-2 text-right text-sm font-semibold text-slate-900">
+            금액: {formatCurrency((Number(item.unit_price || 0) * Number(item.quantity || 0)))}
+          </div>
+        </>
+      )}
     </div>
+  ))}
+</div>
 
 
 <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
   <div className="flex items-center justify-between">
     <span className="text-base text-slate-600">총 판수</span>
     <span className="text-base font-semibold text-slate-900">
-      {(selectedOrder.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0)}판
+      {editingOrderSummary.totalQty}판
     </span>
   </div>
 
   <div className="flex items-center justify-between">
     <span className="text-lg font-bold text-slate-900">총 주문금액</span>
     <span className="text-xl font-bold text-slate-900">
-      {formatCurrency(selectedOrder.total_amount || 0)}
+      {formatCurrency(editingOrderSummary.totalAmt)}
     </span>
   </div>
 </div>
-
-
-    <div className="mt-4 pt-4 border-t border-slate-200">
-      <div className="flex items-center justify-between">
-        <span className="text-lg font-bold text-slate-900">총 주문금액</span>
-        <span className="text-xl font-bold text-slate-900">
-          {formatCurrency(selectedOrder.total_amount || 0)}
-        </span>
-      </div>
-    </div>
 
     {selectedOrder.memo ? (
       <div className="mt-4 rounded-xl bg-slate-50 p-3 border border-slate-200 text-sm text-slate-700">
@@ -1647,6 +1999,92 @@ const formatDateTime = (value) => {
         <div>{selectedOrder.memo}</div>
       </div>
     ) : null}
+
+
+{isEditingOrder ? (
+  <div className="mt-4 space-y-3">
+
+    <div>
+  <div className="mb-2 text-sm font-semibold text-slate-700">품목 추가</div>
+
+  <input
+    type="text"
+    value={editItemSearchTerm}
+    onChange={(e) => setEditItemSearchTerm(e.target.value)}
+    placeholder="추가할 품목 검색"
+    className="h-12 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+  />
+
+  {editItemSearchTerm.trim() ? (
+    <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+      {filteredEditableProducts.length === 0 ? (
+        <div className="p-4 text-sm text-slate-500">검색 결과가 없습니다.</div>
+      ) : (
+        filteredEditableProducts.slice(0, 20).map((product) => (
+          <button
+            key={`edit-add-${product.id}`}
+            type="button"
+            onClick={() => addItemToEditingOrder(product)}
+            className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0"
+          >
+            <div>
+              <div className="font-medium text-slate-900">{product.name}</div>
+              <div className="mt-1 text-sm text-slate-500">
+                {formatCurrency(product.price)} / {product.unit}
+              </div>
+            </div>
+
+            <div className="text-sm font-semibold text-slate-700">
+              추가
+            </div>
+          </button>
+        ))
+      )}
+    </div>
+  ) : null}
+</div>
+
+    <div>
+      <div className="mb-2 text-sm font-semibold text-slate-700">요청사항 수정</div>
+      <textarea
+        value={editingOrderMemo}
+        onChange={(e) => setEditingOrderMemo(e.target.value)}
+        placeholder="요청사항 입력"
+        className="min-h-[90px] w-full rounded-2xl border border-slate-300 p-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 resize-none"
+      />
+    </div>
+
+    <div>
+      <div className="mb-2 text-sm font-semibold text-slate-700">수정 사유</div>
+      <textarea
+        value={editingReason}
+        onChange={(e) => setEditingReason(e.target.value)}
+        placeholder="예: 거래처 요청으로 수량 정정"
+        className="min-h-[90px] w-full rounded-2xl border border-slate-300 p-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 resize-none"
+      />
+    </div>
+
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={cancelEditSelectedOrder}
+        className="flex-1 rounded-2xl border border-slate-300 bg-white py-3 text-base font-bold text-slate-900"
+      >
+        취소
+      </button>
+
+      <button
+        type="button"
+        onClick={handleUpdateSelectedOrder}
+        disabled={isUpdatingOrder}
+        className="flex-1 rounded-2xl bg-slate-900 py-3 text-base font-bold text-white disabled:opacity-60"
+      >
+        {isUpdatingOrder ? "저장 중..." : "수정 저장"}
+      </button>
+    </div>
+  </div>
+) : null}
+
   </div>
 ) : null}
 
