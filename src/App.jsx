@@ -327,7 +327,15 @@ const toggleProductStatus = async (productId) => {
   const selectedCustomer = customers.find(
     (c) => String(c.id) === String(selectedCustomerId)
   );
+const sortedCustomers = [...customers].sort((a, b) => {
+  if (a.name === "비회원주문") return -1;
+  if (b.name === "비회원주문") return 1;
 
+  if (a.name === "개발자 모드") return 1;
+  if (b.name === "개발자 모드") return -1;
+
+  return 0;
+});
   const DEV_CUSTOMER_NAME = "개발자 모드";
 const DEV_PASSWORD = "2908";
 const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
@@ -1196,7 +1204,7 @@ const formatDateTime = (value) => {
     className="h-14 w-full rounded-2xl border border-slate-300 px-4 text-lg font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
   >
     <option value="">거래처를 선택하세요</option>
-    {customers.map((c) => (
+    {sortedCustomers.map((c) => (
       <option key={c.id} value={c.id}>
         {c.name}
       </option>
@@ -1241,14 +1249,15 @@ const formatDateTime = (value) => {
       거래처를 먼저 선택하면 입금 등록, 주문 내역, 정산 요약이 모두 해당 거래처 기준으로 표시됩니다.
     </p>
 
+
+
     <select
       value={developerCustomerId}
       onChange={(e) => setDeveloperCustomerId(e.target.value)}
       className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
     >
       <option value="">거래처를 선택하세요</option>
-      {customers
-        .map((c) => (
+      + {sortedCustomers.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
