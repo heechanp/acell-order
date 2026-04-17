@@ -37,7 +37,7 @@ function isSupabaseConfigured() {
 
 async function fetchOrderById(orderId) {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason`,
+    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,order_number,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -246,7 +246,7 @@ async function fetchCustomers() {
 
 async function fetchOrders() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?select=id,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/orders?select=id,order_number,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -269,6 +269,21 @@ async function fetchOrders() {
 
   return response.json();
 }
+
+
+function generateOrderNumber() {
+  const now = new Date();
+
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mi = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+
+  return `ORD-${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+}
+
 
 async function fetchPayments() {
   const response = await fetch(
@@ -1217,9 +1232,11 @@ setSelectedReceiptOrder(null);
 localStorage.removeItem("seedling-order-draft");
   setIsSaving(true);
   
-
+const orderNumber = generateOrderNumber();
 
   const payload = {
+      order_number: orderNumber,
+
   customer_id: selectedCustomer.id,
   customer_name: selectedCustomer.name,
   items: [
