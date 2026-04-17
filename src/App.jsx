@@ -1804,23 +1804,34 @@ const formatDateTime = (value) => {
         </div>
 
         <div className="space-y-2">
-          {orderItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-start justify-between gap-3 text-sm"
-            >
-              <div className="min-w-0">
-                <div className="font-semibold text-slate-900">{item.name}</div>
-                <div className="mt-1 text-slate-500">
-                  {formatCurrency(item.price)} × {item.quantity}{item.unit}
-                </div>
-              </div>
+          
+{orderItems.map((item) => {
+  const guestAmount = Number(guestItemAmounts[item.id] || 0);
 
-              <div className="shrink-0 font-bold text-slate-900">
-                {formatCurrency(item.amount)}
-              </div>
-            </div>
-          ))}
+  return (
+    <div
+      key={item.id}
+      className="flex items-start justify-between gap-3 text-sm"
+    >
+      <div className="min-w-0">
+        <div className="font-semibold text-slate-900">{item.name}</div>
+
+        <div className="mt-1 text-slate-500">
+          {isGuestOrder
+            ? `${formatCurrency(guestAmount)}`
+            : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
+        </div>
+      </div>
+
+      <div className="shrink-0 font-bold text-slate-900">
+        {isGuestOrder
+          ? formatCurrency(guestAmount)
+          : formatCurrency(item.amount)}
+      </div>
+    </div>
+  );
+})}
+
         </div>
       </div>
     ) : (
