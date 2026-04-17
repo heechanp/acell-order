@@ -608,10 +608,10 @@ useEffect(() => {
 
   const totalAmount = useMemo(() => {
   if (isGuestOrder) {
-    const guestProductsTotal = orderItems.reduce(
-      (sum, item) => sum + Number(guestItemAmounts[item.id] || 0),
-      0
-    );
+    const guestProductsTotal = orderItems.reduce((sum, item) => {
+      const guestUnitPrice = Number(guestItemAmounts[item.id] || 0);
+      return sum + guestUnitPrice * Number(item.quantity || 0);
+    }, 0);
 
     return guestProductsTotal + Number(customItemAmount || 0);
   }
@@ -831,7 +831,7 @@ localStorage.removeItem("seedling-order-draft");
       quantity: item.quantity,
       unit: item.unit,
       unit_price: isGuestOrder ? guestAmount : item.price,
-      amount: isGuestOrder ? guestAmount : item.amount
+      amount: isGuestOrder ? guestAmount * item.quantity : item.amount
     };
   }),
   ...(isGuestOrder && customItemAmount
@@ -1028,14 +1028,16 @@ const formatDateTime = (value) => {
         <div className="font-medium text-slate-900">{item.name}</div>
         <div className="mt-1 text-sm text-slate-500">
           {isGuestOrder
-            ? `${item.quantity}${item.unit} / ${formatCurrency(guestAmount)}`
-            : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
+  ? `${formatCurrency(guestAmount)} × ${item.quantity}${item.unit}`
+  : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
         </div>
       </div>
 
       <span className="font-semibold text-slate-900 whitespace-nowrap">
-        {isGuestOrder ? formatCurrency(guestAmount) : formatCurrency(item.amount)}
-      </span>
+  {isGuestOrder
+    ? formatCurrency(guestAmount * item.quantity)
+    : formatCurrency(item.amount)}
+</span>
     </div>
   );
 })}
@@ -1852,17 +1854,17 @@ const formatDateTime = (value) => {
         <div className="font-semibold text-slate-900">{item.name}</div>
 
         <div className="mt-1 text-slate-500">
-          {isGuestOrder
-            ? `${formatCurrency(guestAmount)}`
-            : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
-        </div>
+  {isGuestOrder
+    ? `${formatCurrency(guestAmount)} × ${item.quantity}${item.unit}`
+    : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
+</div>
       </div>
 
       <div className="shrink-0 font-bold text-slate-900">
-        {isGuestOrder
-          ? formatCurrency(guestAmount)
-          : formatCurrency(item.amount)}
-      </div>
+  {isGuestOrder
+    ? formatCurrency(guestAmount * item.quantity)
+    : formatCurrency(item.amount)}
+</div>
     </div>
   );
 })}
