@@ -1110,10 +1110,14 @@ useEffect(() => {
       .filter((order) => order.customer_id == null && !order.is_cancelled)
       .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
 
+    const totalPaid = payments
+      .filter((payment) => payment.customer_id == null)
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
     return {
       totalOrdered,
-      totalPaid: 0,
-      balance: totalOrdered,
+      totalPaid,
+      balance: totalOrdered - totalPaid,
     };
   }
 
@@ -1134,13 +1138,11 @@ useEffect(() => {
     .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
 
   const totalPaid = payments
-  .filter((payment) => {
-    if (developerTargetCustomerId === "manual") {
-      return payment.customer_id == null;
-    }
-    return String(payment.customer_id) === String(developerTargetCustomerId);
-  })
-  .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    .filter(
+      (payment) =>
+        String(payment.customer_id) === String(selectedCustomer.id)
+    )
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
   return {
     totalOrdered,
@@ -1174,15 +1176,14 @@ const developerCustomerSummary = useMemo(() => {
     })
     .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
 
-  const totalPaid =
-    developerTargetCustomerId === "manual"
-      ? 0
-      : payments
-          .filter(
-            (payment) =>
-              String(payment.customer_id) === String(developerTargetCustomerId)
-          )
-          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const totalPaid = payments
+  .filter((payment) => {
+    if (developerTargetCustomerId === "manual") {
+      return payment.customer_id == null;
+    }
+    return String(payment.customer_id) === String(developerTargetCustomerId);
+  })
+  .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
   return {
     totalOrdered,
