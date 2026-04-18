@@ -1134,10 +1134,13 @@ useEffect(() => {
     .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
 
   const totalPaid = payments
-    .filter(
-      (payment) => String(payment.customer_id) === String(selectedCustomer.id)
-    )
-    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  .filter((payment) => {
+    if (developerTargetCustomerId === "manual") {
+      return payment.customer_id == null;
+    }
+    return String(payment.customer_id) === String(developerTargetCustomerId);
+  })
+  .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
   return {
     totalOrdered,
@@ -1222,10 +1225,14 @@ const recentPayments = useMemo(() => {
   if (!developerCustomerId) return [];
 
   return payments
-    .filter((payment) => String(payment.customer_id) === String(developerCustomerId))
+    .filter((payment) => {
+      if (developerCustomerId === "manual") {
+        return payment.customer_id == null;
+      }
+      return String(payment.customer_id) === String(developerCustomerId);
+    })
     .slice()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
 }, [payments, developerCustomerId]);
 
 const PAYMENTS_PER_PAGE = 5;
@@ -1248,6 +1255,7 @@ useEffect(() => {
 
 
 const getCustomerNameById = (customerId) => {
+  if (customerId == null) return "거래처 수동 주문";
   return customers.find((c) => c.id === customerId)?.name || `거래처 #${customerId}`;
 };
 
@@ -1277,10 +1285,10 @@ const handleSavePayment = async () => {
     setIsSavingPayment(true);
 
     await savePaymentToSupabase({
-customer_id: Number(developerCustomerId),
-      amount,
-      memo: paymentMemo || null
-    });
+  customer_id: developerCustomerId === "manual" ? null : Number(developerCustomerId),
+  amount,
+  memo: paymentMemo || null
+});
 
     setPaymentCustomerId("");
     setPaymentAmount("");
