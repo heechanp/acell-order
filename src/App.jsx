@@ -416,6 +416,8 @@ const [manualCustomerName, setManualCustomerName] = useState("");
 
 const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
+const [showOverallCustomerBreakdown, setShowOverallCustomerBreakdown] = useState(false);
+
 const toggleProductStatus = async (productId) => {
   const key = String(productId);
   const currentStatus = productStatus[key] ?? "active";
@@ -1192,6 +1194,137 @@ const developerCustomerSummary = useMemo(() => {
   };
 }, [developerTargetCustomerId, orders, payments]);
 
+
+
+const developerModeCustomerIds = useMemo(() => {
+  return customers
+    .filter((c) => c.name === DEV_CUSTOMER_NAME)
+    .map((c) => String(c.id));
+}, [customers]);
+
+const overallCustomerSummary = useMemo(() => {
+  const totalOrdered = orders
+    .filter((order) => {
+      if (order.is_cancelled) return false;
+
+      if (order.customer_name === DEV_CUSTOMER_NAME) return false;
+
+      if (
+        order.customer_id != null &&
+        developerModeCustomerIds.includes(String(order.customer_id))
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+
+  const totalPaid = payments
+    .filter((payment) => {
+      if (
+        payment.customer_id != null &&
+        developerModeCustomerIds.includes(String(payment.customer_id))
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+  return {
+    totalOrdered,
+    totalPaid,
+    balance: totalOrdered - totalPaid,
+  };
+}, [orders, payments, developerModeCustomerIds]);
+
+
+const overallCustomerBreakdown = useMemo(() => {
+  const summaryMap = new Map();
+
+  const devCustomerIds = new Set(
+    customers
+      .filter((c) => c.name === DEV_CUSTOMER_NAME)
+      .map((c) => String(c.id))
+  );
+
+  const getGroupKey = (orderOrPayment) => {
+  if (orderOrPayment.customer_id == null) {
+    return "manual:거래처 수동 주문";
+  }
+
+  return `customer:${orderOrPayment.customer_id}`;
+};
+
+const getGroupLabel = (orderOrPayment) => {
+  if (orderOrPayment.customer_id == null) {
+    return "거래처 수동 주문";
+  }
+
+  const matched = customers.find(
+    (c) => String(c.id) === String(orderOrPayment.customer_id)
+  );
+  return matched?.name || `거래처 #${orderOrPayment.customer_id}`;
+};
+
+  orders.forEach((order) => {
+    if (order.is_cancelled) return;
+    if (order.customer_name === DEV_CUSTOMER_NAME) return;
+    if (order.customer_id != null && devCustomerIds.has(String(order.customer_id))) return;
+
+    const key = getGroupKey(order);
+    const label = getGroupLabel(order);
+
+    if (!summaryMap.has(key)) {
+      summaryMap.set(key, {
+        key,
+        name: label,
+        totalOrdered: 0,
+        totalPaid: 0,
+        balance: 0,
+      });
+    }
+
+    summaryMap.get(key).totalOrdered += Number(order.total_amount || 0);
+  });
+
+  payments.forEach((payment) => {
+    if (payment.customer_id != null && devCustomerIds.has(String(payment.customer_id))) return;
+
+    const key =
+      payment.customer_id == null
+        ? "manual:거래처 수동 주문"
+        : `customer:${payment.customer_id}`;
+
+    const label =
+      payment.customer_id == null
+        ? "거래처 수동 주문"
+        : customers.find((c) => String(c.id) === String(payment.customer_id))?.name ||
+          `거래처 #${payment.customer_id}`;
+
+    if (!summaryMap.has(key)) {
+      summaryMap.set(key, {
+        key,
+        name: label,
+        totalOrdered: 0,
+        totalPaid: 0,
+        balance: 0,
+      });
+    }
+
+    summaryMap.get(key).totalPaid += Number(payment.amount || 0);
+  });
+
+  return Array.from(summaryMap.values())
+    .map((item) => ({
+      ...item,
+      balance: item.totalOrdered - item.totalPaid,
+    }))
+    .sort((a, b) => b.balance - a.balance);
+}, [orders, payments, customers]);
+
 const RECEIPT_ORDERS_PER_PAGE = 5;
 
 const recentOrdersForCustomer = useMemo(() => {
@@ -1690,7 +1823,9 @@ const formatDateTime = (value) => {
     <>
       <div className="space-y-3">
         {pagedReceiptOrders.map((order) => {
-          const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+          const totalQty = Array.isArray(order.items)
+            ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+            : 0;
 
           return (
             <button
@@ -1705,7 +1840,7 @@ const formatDateTime = (value) => {
                     {formatDateTime(order.created_at)}
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    품목 {itemCount}개
+                    총판수 {totalQty}판
                   </div>
                 </div>
 
@@ -2064,6 +2199,88 @@ const formatDateTime = (value) => {
 ) : null}
 
 
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">전체 거래처 정산 요약</div>
+    <p className="mt-2 text-sm text-slate-600">
+      개발자 모드를 제외한 전체 거래처의 누적 주문/입금 현황입니다.
+    </p>
+
+    <div className="mt-3 space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-slate-600">누적 주문액</span>
+        <span className="font-semibold text-slate-900">
+          {formatCurrency(overallCustomerSummary.totalOrdered)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-slate-600">누적 입금액</span>
+        <span className="font-semibold text-slate-900">
+          {formatCurrency(overallCustomerSummary.totalPaid)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+        <span className="text-slate-900 font-bold">현재 미수금</span>
+        <span className="text-lg font-bold text-slate-900">
+          {formatCurrency(overallCustomerSummary.balance)}
+        </span>
+      </div>
+    </div>
+
+<button
+  type="button"
+  onClick={() => setShowOverallCustomerBreakdown((prev) => !prev)}
+  className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900"
+>
+  {showOverallCustomerBreakdown ? "거래처별 상세 닫기" : "거래처별 상세 보기"}
+</button>
+
+{showOverallCustomerBreakdown ? (
+  <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+    {overallCustomerBreakdown.length === 0 ? (
+      <div className="text-sm text-slate-500">표시할 거래처 정산 내역이 없습니다.</div>
+    ) : (
+      overallCustomerBreakdown.map((item) => (
+        <div
+          key={item.key}
+          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+        >
+          <div className="text-sm font-bold text-slate-900">{item.name}</div>
+
+          <div className="mt-2 space-y-1 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">누적 주문액</span>
+              <span className="font-semibold text-slate-900">
+                {formatCurrency(item.totalOrdered)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">누적 입금액</span>
+              <span className="font-semibold text-slate-900">
+                {formatCurrency(item.totalPaid)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+              <span className="font-bold text-slate-900">미수금</span>
+              <span className="font-bold text-slate-900">
+                {formatCurrency(item.balance)}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+) : null}
+
+  </div>
+) : null}
+
+
     {recentPayments.length === 0 ? (
       <p className="mt-2 text-sm text-slate-500">아직 등록된 입금 내역이 없습니다.</p>
     ) : (
@@ -2158,9 +2375,11 @@ const formatDateTime = (value) => {
       <>
         <div className="mt-3 space-y-3">
           {pagedOrders.map((order) => {
-            const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+  const totalQty = Array.isArray(order.items)
+    ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+    : 0;
 
-            return (
+  return (
               <button
                 key={order.id}
                 type="button"
@@ -2201,9 +2420,9 @@ const formatDateTime = (value) => {
                     <div className="text-sm font-bold text-slate-900">
                       {formatCurrency(order.total_amount || 0)}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      품목 {itemCount}개
-                    </div>
+                   <div className="mt-1 text-xs text-slate-500">
+  총판수 {totalQty}판
+</div>
                   </div>
                 </div>
               </button>
