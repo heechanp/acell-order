@@ -6,6 +6,11 @@ function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString()}원`;
 }
 
+function formatShortTime(value) {
+  if (!value) return "";
+  return String(value).replace("T", " ").slice(0, 16);
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
@@ -46,7 +51,7 @@ export default async function handler(req, res) {
 
     if (type === "updated") {
       titleText = "주문이 수정되었습니다";
-  subjectText = `[주문 수정] ${customerName} / ${orderNumber || "-"} / ${formatShortTime(editedAt)}`;
+      subjectText = `[주문 수정] ${customerName} / ${orderNumber || "-"} / ${formatShortTime(editedAt)}`;
       extraHtml = `
         <div style="margin-top:16px;padding:12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:12px;">
           <p style="margin:0 0 8px;"><strong>수정일시:</strong> ${editedAt || "-"}</p>
@@ -55,7 +60,7 @@ export default async function handler(req, res) {
       `;
     } else if (type === "cancelled") {
       titleText = "주문이 취소되었습니다";
-  subjectText = `[주문 취소] ${customerName} / ${orderNumber || "-"} / ${formatShortTime(cancellededAt)}`;
+      subjectText = `[주문 취소] ${customerName} / ${orderNumber || "-"} / ${formatShortTime(cancelledAt)}`;
       extraHtml = `
         <div style="margin-top:16px;padding:12px;border:1px solid #fecaca;background:#fef2f2;border-radius:12px;">
           <p style="margin:0 0 8px;"><strong>취소일시:</strong> ${cancelledAt || "-"}</p>
@@ -64,10 +69,6 @@ export default async function handler(req, res) {
       `;
     }
 
-    const formatShortTime = (value) => {
-  if (!value) return "";
-  return value.replace("T", " ").slice(0, 16);
-};
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px;">
         <h2 style="margin:0 0 16px;">${titleText}</h2>
