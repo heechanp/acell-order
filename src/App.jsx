@@ -287,7 +287,7 @@ function generateOrderNumber() {
 
 async function fetchPayments() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?select=id,customer_id,amount,memo,created_at&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/payments?select=id,customer_id,amount,memo,created_at,order_id,order_number,payment_type&order=created_at.desc`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -445,6 +445,7 @@ const toggleProductStatus = async (productId) => {
     alert("상품 상태 저장에 실패했습니다.");
   }
 };
+
 
 const editingOrderSummary = useMemo(() => {
   const baseItems = isEditingOrder ? editingOrderItems : (selectedOrder?.items || []);
@@ -1381,6 +1382,17 @@ const pagedPayments = useMemo(() => {
   return recentPayments.slice(startIndex, startIndex + PAYMENTS_PER_PAGE);
 }, [recentPayments, paymentPage]);
 
+const paidOrderIdSet = useMemo(() => {
+  const set = new Set();
+
+  payments.forEach((payment) => {
+    if (payment.order_id != null) {
+      set.add(String(payment.order_id));
+    }
+  });
+
+  return set;
+}, [payments]);
 
 useEffect(() => {
   setPaymentPage(1);
@@ -1403,6 +1415,28 @@ const getCustomerNameById = (customerId) => {
   }
 };
 
+
+const createPaymentRecord = async ({
+  customerId,
+  amount,
+  memo = null,
+  orderId = null,
+  orderNumber = null,
+  paymentType = "manual",
+}) => {
+  const saved = await savePaymentToSupabase({
+    customer_id: customerId === "manual" ? null : Number(customerId),
+    amount: Number(amount),
+    memo,
+    order_id: orderId,
+    order_number: orderNumber,
+    payment_type: paymentType,
+  });
+
+  await loadSummaryData();
+  return saved;
+};
+
 const handleSavePayment = async () => {
   if (!developerCustomerId) {
     alert("입금 거래처를 선택해주세요.");
@@ -1418,21 +1452,95 @@ const handleSavePayment = async () => {
   try {
     setIsSavingPayment(true);
 
-    await savePaymentToSupabase({
-  customer_id: developerCustomerId === "manual" ? null : Number(developerCustomerId),
-  amount,
-  memo: paymentMemo || null
-});
+    await createPaymentRecord({
+      customerId: developerCustomerId,
+      amount,
+      memo: paymentMemo || null,
+      paymentType: "manual",
+    });
 
-    setPaymentCustomerId("");
     setPaymentAmount("");
     setPaymentMemo("");
-    await loadSummaryData();
 
     alert("입금이 저장되었습니다.");
   } catch (error) {
     console.error(error);
     alert("입금 저장에 실패했습니다.");
+  } finally {
+    setIsSavingPayment(false);
+  }
+};
+
+const handleRegisterSelectedOrderPayment = async () => {
+  if (!selectedOrder) {
+    alert("주문 명세서를 먼저 선택해주세요.");
+    return;
+  }
+
+  if (!developerCustomerId) {
+    alert("거래처를 먼저 선택해주세요.");
+    return;
+  }
+
+  if (selectedOrder.is_cancelled) {
+    alert("취소된 주문은 입금 등록할 수 없습니다.");
+    return;
+  }
+
+  if (developerCustomerId === "manual") {
+    if (selectedOrder.customer_id != null) {
+      alert("현재 선택한 거래처와 주문 거래처가 다릅니다.");
+      return;
+    }
+  } else {
+    if (String(selectedOrder.customer_id) !== String(developerCustomerId)) {
+      alert("현재 선택한 거래처와 주문 거래처가 다릅니다.");
+      return;
+    }
+  }
+
+  const alreadyPaid = payments.some(
+    (payment) =>
+      payment.order_id != null &&
+      String(payment.order_id) === String(selectedOrder.id)
+  );
+
+  if (alreadyPaid) {
+    alert("이미 이 명세서로 등록된 입금 내역이 있습니다.");
+    return;
+  }
+
+  const amount = Number(selectedOrder.total_amount || 0);
+  if (!amount || amount <= 0) {
+    alert("주문 금액이 올바르지 않습니다.");
+    return;
+  }
+
+  const ok = window.confirm(
+    `${selectedOrder.order_number || "선택한 명세서"} 금액 ${formatCurrency(amount)}을 입금 등록할까요?`
+  );
+  if (!ok) return;
+
+  try {
+    setIsSavingPayment(true);
+
+    const saved = await createPaymentRecord({
+      customerId: developerCustomerId,
+      amount,
+      memo: `명세서 입금${selectedOrder.order_number ? ` (${selectedOrder.order_number})` : ""}`,
+      orderId: selectedOrder.id,
+      orderNumber: selectedOrder.order_number || null,
+      paymentType: "receipt",
+    });
+
+    if (Array.isArray(saved) && saved.length > 0) {
+      setSelectedPayment(saved[0]);
+    }
+
+    alert("명세서 기준 입금이 등록되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("명세서 입금 등록에 실패했습니다.");
   } finally {
     setIsSavingPayment(false);
   }
@@ -2151,6 +2259,16 @@ const formatDateTime = (value) => {
       입금액: {formatCurrency(selectedPayment.amount)}
     </div>
 
+    <div className="mt-2 text-sm text-slate-600">
+  입금방식: {selectedPayment.payment_type === "receipt" ? "명세서 입금" : "수동 입금"}
+</div>
+
+{selectedPayment.order_number ? (
+  <div className="mt-1 text-sm text-slate-600">
+    연결 명세서: {selectedPayment.order_number}
+  </div>
+) : null}
+
     {selectedPayment.memo ? (
       <div className="mt-3 text-sm text-slate-600">
         메모: {selectedPayment.memo}
@@ -2305,6 +2423,11 @@ const formatDateTime = (value) => {
               <div className="mt-1 text-xs text-slate-500">
                 {getCustomerNameById(payment.customer_id)}
               </div>
+              <div className="mt-1 text-xs text-slate-500">
+  {payment.payment_type === "receipt"
+    ? `명세서 입금${payment.order_number ? ` · ${payment.order_number}` : ""}`
+    : "수동 입금"}
+</div>
             </div>
 
             <div className="shrink-0 text-right">
@@ -2374,6 +2497,8 @@ const formatDateTime = (value) => {
     ) : (
       <>
         <div className="mt-3 space-y-3">
+
+          
           {pagedOrders.map((order) => {
   const totalQty = Array.isArray(order.items)
     ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
@@ -2388,6 +2513,8 @@ const formatDateTime = (value) => {
   ${
     order.is_cancelled
       ? "border-red-200 bg-red-50 opacity-60"
+      : paidOrderIdSet.has(String(order.id))
+      ? "border-emerald-200 bg-emerald-50"
       : "border-slate-200 bg-slate-50"
   }
 `}
@@ -2481,6 +2608,33 @@ const formatDateTime = (value) => {
     <div className="mt-2 text-sm text-slate-500">
       주문일시: {formatDateTime(selectedOrder.created_at)}
     </div>
+
+    {paidOrderIdSet.has(String(selectedOrder.id)) ? (
+  <div className="mt-1 text-xs font-semibold text-emerald-600">
+    ✔ 입금완료
+  </div>
+) : null}
+
+    {payments.some(
+  (payment) =>
+    payment.order_id != null &&
+    String(payment.order_id) === String(selectedOrder.id)
+) ? (
+  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+    이미 이 명세서로 등록된 입금 내역이 있습니다.
+  </div>
+) : null}
+
+{!selectedOrder?.is_cancelled ? (
+  <button
+    type="button"
+    onClick={handleRegisterSelectedOrderPayment}
+    disabled={isSavingPayment}
+    className="mt-3 w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg active:scale-[0.99] transition disabled:opacity-60"
+  >
+    {isSavingPayment ? "입금 저장 중..." : "이 명세서 금액으로 입금 등록"}
+  </button>
+) : null}
 
 
 {!isEditingOrder && !selectedOrder?.is_cancelled ? (
