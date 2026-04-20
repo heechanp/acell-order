@@ -2,7 +2,7 @@ export const productsA = [
   { id: 1, category: "오이류", name: "청오이", price: 12000, unit: "판", status: "active" },
   { id: 2, category: "오이류", name: "가시오이", price: 10000, unit: "판", status: "active" },
   { id: 3, category: "오이류", name: "조선오이", price: 10000, unit: "판", status: "active" },
-  { id: 4, category: "오이류", name: "노각오이", price: 10000, unit: "판", status: "active" },
+  { id: 4, category: "오이류", name: "노각오이", price: 12000, unit: "판", status: "active" },
   { id: 5, category: "오이류", name: "미니오이", price: 12000, unit: "판", status: "active" },
 
   { id: 10, category: "박류", name: "고지박", price: 12000, unit: "판", status: "active" },
