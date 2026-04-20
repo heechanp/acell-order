@@ -3087,36 +3087,64 @@ const formatDateTime = (value) => {
 
         </div>
 
-        <div className="space-y-2">
-          
-{orderItems.map((item) => {
-  const guestAmount = Number(guestItemAmounts[item.id] || 0);
+    <div className="space-y-2">
+  {orderItems.map((item) => {
+    const guestAmount = Number(guestItemAmounts[item.id] || 0);
 
-  return (
-    <div
-      key={item.id}
-      className="flex items-start justify-between gap-3 text-sm"
-    >
-      <div className="min-w-0">
-        <div className="font-semibold text-slate-900">{item.name}</div>
+    return (
+      <div
+        key={item.id}
+        className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[15px] font-semibold text-slate-900">
+              {item.name}
+            </div>
 
-        <div className="mt-1 text-slate-500">
-  {isGuestOrder
-    ? `${formatCurrency(guestAmount)} × ${item.quantity}${item.unit}`
-    : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
-</div>
-      </div>
+            <div className="mt-0.5 text-xs text-slate-500">
+              {isGuestOrder
+                ? `${formatCurrency(guestAmount)} × ${item.quantity}${item.unit}`
+                : `${formatCurrency(item.price)} × ${item.quantity}${item.unit}`}
+            </div>
+          </div>
 
-      <div className="shrink-0 font-bold text-slate-900">
-  {isGuestOrder
-    ? formatCurrency(guestAmount * item.quantity)
-    : formatCurrency(item.amount)}
-</div>
-    </div>
-  );
-})}
+          <div className="shrink-0 flex items-center gap-2">
+            <div className="min-w-[72px] text-right text-[15px] font-bold text-slate-900">
+              {isGuestOrder
+                ? formatCurrency(guestAmount * item.quantity)
+                : formatCurrency(item.amount)}
+            </div>
 
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => updateQty(item.id, Number(item.quantity || 0) - 1)}
+                className="h-7 w-7 rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-800"
+              >
+                -
+              </button>
+
+              <div className="min-w-[16px] text-center text-sm font-bold text-slate-900">
+                {item.quantity}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => updateQty(item.id, Number(item.quantity || 0) + 1)}
+                className="h-7 w-7 rounded-lg border border-slate-300 bg-white text-sm font-bold text-slate-800"
+              >
+                +
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+    );
+  })}
+
+</div>
+
       </div>
     ) : (
       <div className="mb-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-500">
