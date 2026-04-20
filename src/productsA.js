@@ -63,7 +63,7 @@ export const productsA = [
 
   { id: 80, category: "참외·수박·멜론", name: "망고참외", price: 35000, unit: "판", status: "active" },
   { id: 81, category: "참외·수박·멜론", name: "일반참외", price: 12000, unit: "판", status: "active" },
-  { id: 82, category: "참외·수박·멜론", name: "미니 복수박", price: 12000, unit: "판", status: "active" },
+  { id: 82, category: "참외·수박·멜론", name: "미니 복수박", price: 15000, unit: "판", status: "active" },
   { id: 83, category: "참외·수박·멜론", name: "애플수박", price: 25000, unit: "판", status: "active" },
   { id: 84, category: "참외·수박·멜론", name: "망고수박", price: 30000, unit: "판", status: "active" },
   { id: 85, category: "참외·수박·멜론", name: "일반수박", price: 12000, unit: "판", status: "active" },
