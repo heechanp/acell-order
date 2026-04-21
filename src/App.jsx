@@ -37,7 +37,7 @@ function isSupabaseConfigured() {
 
 async function fetchOrderById(orderId) {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,order_number,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason`,
+    `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=id,order_number,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason,is_payment_confirmed,payment_confirmed_at,payment_confirmed_by,payment_confirm_note`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -246,7 +246,7 @@ async function fetchCustomers() {
 
 async function fetchOrders() {
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/orders?select=id,order_number,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason`,
+    `${SUPABASE_URL}/rest/v1/orders?select=id,order_number,customer_id,customer_name,items,total_amount,memo,created_at,is_edited,edited_at,edited_by,edit_reason,original_items,original_total_amount,original_memo,is_cancelled,cancelled_at,cancelled_by,cancel_reason,is_payment_confirmed,payment_confirmed_at,payment_confirmed_by,payment_confirm_note`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -1400,6 +1400,15 @@ useEffect(() => {
 }, [paymentCustomerId]);
 
 
+const isSelectedOrderPaymentDone = useMemo(() => {
+  if (!selectedOrder) return false;
+
+  const paidByReceipt = paidOrderIdSet.has(String(selectedOrder.id));
+  const manuallyConfirmed = !!selectedOrder.is_payment_confirmed;
+
+  return paidByReceipt || manuallyConfirmed;
+}, [selectedOrder, paidOrderIdSet]);
+
 const getCustomerNameById = (customerId) => {
   if (customerId == null) return "거래처 수동 주문";
   return customers.find((c) => c.id === customerId)?.name || `거래처 #${customerId}`;
@@ -1541,6 +1550,110 @@ const handleRegisterSelectedOrderPayment = async () => {
   } catch (error) {
     console.error(error);
     alert("명세서 입금 등록에 실패했습니다.");
+  } finally {
+    setIsSavingPayment(false);
+  }
+};
+
+
+const handleConfirmSelectedOrderPaidWithoutPayment = async () => {
+  if (!selectedOrder) {
+    alert("주문 명세서를 먼저 선택해주세요.");
+    return;
+  }
+
+  if (!developerCustomerId) {
+    alert("거래처를 먼저 선택해주세요.");
+    return;
+  }
+
+  if (selectedOrder.is_cancelled) {
+    alert("취소된 주문은 입금완료 처리할 수 없습니다.");
+    return;
+  }
+
+  if (developerCustomerId === "manual") {
+    if (selectedOrder.customer_id != null) {
+      alert("현재 선택한 거래처와 주문 거래처가 다릅니다.");
+      return;
+    }
+  } else {
+    if (String(selectedOrder.customer_id) !== String(developerCustomerId)) {
+      alert("현재 선택한 거래처와 주문 거래처가 다릅니다.");
+      return;
+    }
+  }
+
+  if (selectedOrder.is_payment_confirmed) {
+    alert("이미 입금완료 처리된 명세서입니다.");
+    return;
+  }
+
+  const alreadyPaidByReceipt = payments.some(
+    (payment) =>
+      payment.order_id != null &&
+      String(payment.order_id) === String(selectedOrder.id)
+  );
+
+  if (alreadyPaidByReceipt) {
+    alert("이미 이 명세서로 실제 입금 등록이 되어 있습니다.");
+    return;
+  }
+
+  const ok = window.confirm(
+    `${selectedOrder.order_number || "선택한 명세서"}를 입금 없이 입금완료 처리할까요?`
+  );
+  if (!ok) return;
+
+  try {
+    setIsSavingPayment(true);
+
+    await updateOrderInSupabase(selectedOrder.id, {
+      is_payment_confirmed: true,
+      payment_confirmed_at: new Date().toISOString(),
+      payment_confirmed_by: "developer",
+      payment_confirm_note: "수동 입금 반영 후 상태만 완료 처리",
+    });
+
+    await loadSummaryData();
+
+    const refreshedOrder = await fetchOrderById(selectedOrder.id);
+    setSelectedOrder(refreshedOrder);
+
+    alert("입금 없이 입금완료 처리되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("입금완료 처리에 실패했습니다.");
+  } finally {
+    setIsSavingPayment(false);
+  }
+};
+
+const handleUnconfirmSelectedOrderPaid = async () => {
+  if (!selectedOrder) return;
+
+  const ok = window.confirm("이 명세서의 입금완료 처리를 해제할까요?");
+  if (!ok) return;
+
+  try {
+    setIsSavingPayment(true);
+
+    await updateOrderInSupabase(selectedOrder.id, {
+      is_payment_confirmed: false,
+      payment_confirmed_at: null,
+      payment_confirmed_by: null,
+      payment_confirm_note: null,
+    });
+
+    await loadSummaryData();
+
+    const refreshedOrder = await fetchOrderById(selectedOrder.id);
+    setSelectedOrder(refreshedOrder);
+
+    alert("입금완료 처리가 해제되었습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("입금완료 해제에 실패했습니다.");
   } finally {
     setIsSavingPayment(false);
   }
@@ -1944,13 +2057,28 @@ const formatDateTime = (value) => {
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900">
-                    {formatDateTime(order.created_at)}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    총판수 {totalQty}판
-                  </div>
-                </div>
+  <div className="flex items-center gap-2 flex-wrap">
+    <div className="text-sm font-semibold text-slate-900">
+      {formatDateTime(order.created_at)}
+    </div>
+
+    {order.is_cancelled ? (
+      <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
+        취소됨
+      </span>
+    ) : null}
+
+    {(paidOrderIdSet.has(String(order.id)) || order.is_payment_confirmed) ? (
+      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
+        입금완료
+      </span>
+    ) : null}
+  </div>
+
+  <div className="mt-1 text-xs text-slate-500">
+    총판수 {totalQty}판
+  </div>
+</div>
 
                 <div className="shrink-0 text-right">
                   <div className="text-sm font-bold text-slate-900">
@@ -2522,7 +2650,7 @@ const formatDateTime = (value) => {
                 <div className="flex items-center justify-between gap-3">
                   
 <div className="min-w-0">
-  <div className="flex items-center gap-2">
+  <div className="flex items-center gap-2 flex-wrap">
     <div className="text-sm font-semibold text-slate-900">
       {order.customer_name || getCustomerNameById(order.customer_id)}
     </div>
@@ -2530,6 +2658,12 @@ const formatDateTime = (value) => {
     {order.is_cancelled ? (
       <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600">
         취소됨
+      </span>
+    ) : null}
+
+    {(paidOrderIdSet.has(String(order.id)) || order.is_payment_confirmed) ? (
+      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
+        입금완료
       </span>
     ) : null}
   </div>
@@ -2609,7 +2743,7 @@ const formatDateTime = (value) => {
       주문일시: {formatDateTime(selectedOrder.created_at)}
     </div>
 
-    {paidOrderIdSet.has(String(selectedOrder.id)) ? (
+    {isSelectedOrderPaymentDone ? (
   <div className="mt-1 text-xs font-semibold text-emerald-600">
     ✔ 입금완료
   </div>
@@ -2621,21 +2755,55 @@ const formatDateTime = (value) => {
     String(payment.order_id) === String(selectedOrder.id)
 ) ? (
   <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-    이미 이 명세서로 등록된 입금 내역이 있습니다.
+    이미 이 명세서로 실제 입금 등록된 내역이 있습니다.
+  </div>
+) : null}
+
+{selectedOrder?.is_payment_confirmed ? (
+  <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+    이 명세서는 입금 생성 없이 입금완료 처리되었습니다.
+    {selectedOrder.payment_confirmed_at ? (
+      <div className="mt-1">
+        처리일시: {formatDateTime(selectedOrder.payment_confirmed_at)}
+      </div>
+    ) : null}
   </div>
 ) : null}
 
 {!selectedOrder?.is_cancelled ? (
-  <button
-    type="button"
-    onClick={handleRegisterSelectedOrderPayment}
-    disabled={isSavingPayment}
-    className="mt-3 w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg active:scale-[0.99] transition disabled:opacity-60"
-  >
-    {isSavingPayment ? "입금 저장 중..." : "이 명세서 금액으로 입금 등록"}
-  </button>
-) : null}
+  <div className="mt-3 space-y-2">
+    <button
+      type="button"
+      onClick={handleRegisterSelectedOrderPayment}
+      disabled={isSavingPayment || isSelectedOrderPaymentDone}
+      className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-lg active:scale-[0.99] transition disabled:opacity-60"
+    >
+      {isSavingPayment ? "처리 중..." : "이 명세서 금액으로 입금 등록"}
+    </button>
 
+    {!selectedOrder?.is_payment_confirmed && !paidOrderIdSet.has(String(selectedOrder.id)) ? (
+      <button
+        type="button"
+        onClick={handleConfirmSelectedOrderPaidWithoutPayment}
+        disabled={isSavingPayment}
+        className="w-full rounded-2xl border border-blue-300 bg-blue-50 py-3 text-sm font-bold text-blue-700 active:scale-[0.99] transition disabled:opacity-60"
+      >
+        {isSavingPayment ? "처리 중..." : "입금 없이 입금완료 처리"}
+      </button>
+    ) : null}
+
+    {selectedOrder?.is_payment_confirmed ? (
+      <button
+        type="button"
+        onClick={handleUnconfirmSelectedOrderPaid}
+        disabled={isSavingPayment}
+        className="w-full rounded-2xl border border-slate-300 bg-white py-3 text-sm font-bold text-slate-700 active:scale-[0.99] transition disabled:opacity-60"
+      >
+        {isSavingPayment ? "처리 중..." : "입금완료 처리 해제"}
+      </button>
+    ) : null}
+  </div>
+) : null}
 
 {!isEditingOrder && !selectedOrder?.is_cancelled ? (
   
