@@ -73,7 +73,7 @@ export const productsB = [
   { id: 91, category: "옥수수류", name: "옥수수 105구(한 알맹이씩)", price: 8000, unit: "판", status: "active" },
   { id: 92, category: "옥수수류", name: "옥수수 105구(두 알맹이씩)", price: 10000, unit: "판", status: "active" },
 
-  { id: 100, category: "콩류", name: "강낭콩", price: 15000, unit: "판", status: "active" },
+  { id: 100, category: "콩류", name: "강낭콩", price: 12000, unit: "판", status: "active" },
   { id: 101, category: "콩류", name: "작두콩", price: 20000, unit: "판", status: "active" },
   { id: 102, category: "콩류", name: "땅콩", price: 9000, unit: "판", status: "active" },
   { id: 103, category: "콩류", name: "완두콩", price: 8000, unit: "판", status: "active" },

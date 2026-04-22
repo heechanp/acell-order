@@ -418,6 +418,34 @@ const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
 const [showOverallCustomerBreakdown, setShowOverallCustomerBreakdown] = useState(false);
 
+const [showOverallProductSummary, setShowOverallProductSummary] = useState(false);
+const [openOverallProductCategories, setOpenOverallProductCategories] = useState({});
+
+
+
+const [overallProductSearchTerm, setOverallProductSearchTerm] = useState("");
+
+const [isOverallProductRankingView, setIsOverallProductRankingView] = useState(false);
+
+const [showCustomerProductSummary, setShowCustomerProductSummary] = useState(false);
+const [customerProductSearchTerm, setCustomerProductSearchTerm] = useState("");
+const [openCustomerProductCategories, setOpenCustomerProductCategories] = useState({});
+const [isCustomerProductRankingView, setIsCustomerProductRankingView] = useState(false);
+
+const toggleCustomerProductCategory = (category) => {
+  setOpenCustomerProductCategories((prev) => ({
+    ...prev,
+    [category]: !prev[category],
+  }));
+};
+
+const toggleOverallProductCategory = (category) => {
+  setOpenOverallProductCategories((prev) => ({
+    ...prev,
+    [category]: !prev[category],
+  }));
+};
+
 const toggleProductStatus = async (productId) => {
   const key = String(productId);
   const currentStatus = productStatus[key] ?? "active";
@@ -1061,7 +1089,15 @@ useEffect(() => {
   setSelectedOrder(null);
   setPaymentPage(1);
   setSelectedPayment(null);
+
+    setShowCustomerProductSummary(false);
+  setCustomerProductSearchTerm("");
+  setOpenCustomerProductCategories({});
+  setIsCustomerProductRankingView(false);
+
 }, [developerCustomerId]);
+
+
 
 
   const productsByCategory = useMemo(() => {
@@ -1241,6 +1277,321 @@ const overallCustomerSummary = useMemo(() => {
   };
 }, [orders, payments, developerModeCustomerIds]);
 
+
+const overallProductSummary = useMemo(() => {
+  const productMap = new Map();
+
+  orders.forEach((order) => {
+    if (order.is_cancelled) return;
+    if (order.customer_name === DEV_CUSTOMER_NAME) return;
+
+    if (
+      order.customer_id != null &&
+      developerModeCustomerIds.includes(String(order.customer_id))
+    ) {
+      return;
+    }
+
+    (order.items || []).forEach((item) => {
+      const itemName = String(item.name || "").trim();
+      const itemCategory = String(item.category || "").trim() || "미분류";
+
+      if (!itemName) return;
+      if (itemName === "기타" || itemCategory === "기타") return;
+
+      const key = itemName;
+
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          key,
+          name: itemName,
+          category: itemCategory,
+          totalQuantity: 0,
+          totalAmount: 0,
+          orderCount: 0,
+        });
+      }
+
+      const current = productMap.get(key);
+      current.totalQuantity += Number(item.quantity || 0);
+      current.totalAmount += Number(item.amount || 0);
+      current.orderCount += 1;
+    });
+  });
+
+  const groupedMap = new Map();
+
+  Array.from(productMap.values()).forEach((item) => {
+    const category = item.category || "미분류";
+
+    if (!groupedMap.has(category)) {
+      groupedMap.set(category, []);
+    }
+
+    groupedMap.get(category).push(item);
+  });
+
+  return Array.from(groupedMap.entries())
+    .map(([category, items]) => ({
+      category,
+      items: items.sort((a, b) => b.totalAmount - a.totalAmount),
+    }))
+    .sort((a, b) => {
+      const aIndex = categoryOrder.indexOf(a.category);
+      const bIndex = categoryOrder.indexOf(b.category);
+
+      if (aIndex === -1 && bIndex === -1) {
+        return a.category.localeCompare(b.category, "ko");
+      }
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+
+      return aIndex - bIndex;
+    });
+}, [orders, developerModeCustomerIds]);
+
+
+
+
+const filteredOverallProductSummary = useMemo(() => {
+  const keyword = overallProductSearchTerm.trim().toLowerCase();
+
+  if (!keyword) return overallProductSummary;
+
+  return overallProductSummary
+    .map((group) => {
+      const filteredItems = group.items.filter((item) =>
+        item.name.toLowerCase().includes(keyword)
+      );
+
+      return {
+        ...group,
+        items: filteredItems,
+      };
+    })
+    .filter((group) => group.items.length > 0);
+}, [overallProductSummary, overallProductSearchTerm]);
+
+
+const overallProductRanking = useMemo(() => {
+  const keyword = overallProductSearchTerm.trim().toLowerCase();
+  const productMap = new Map();
+
+  orders.forEach((order) => {
+    if (order.is_cancelled) return;
+    if (order.customer_name === DEV_CUSTOMER_NAME) return;
+
+    if (
+      order.customer_id != null &&
+      developerModeCustomerIds.includes(String(order.customer_id))
+    ) {
+      return;
+    }
+
+    (order.items || []).forEach((item) => {
+      const itemName = String(item.name || "").trim();
+      const itemCategory = String(item.category || "").trim() || "미분류";
+
+      if (!itemName) return;
+      if (itemName === "기타" || itemCategory === "기타") return;
+
+      if (keyword && !itemName.toLowerCase().includes(keyword)) return;
+
+      const key = itemName;
+
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          key,
+          name: itemName,
+          category: itemCategory,
+          totalQuantity: 0,
+          totalAmount: 0,
+          orderCount: 0,
+        });
+      }
+
+      const current = productMap.get(key);
+      current.totalQuantity += Number(item.quantity || 0);
+      current.totalAmount += Number(item.amount || 0);
+      current.orderCount += 1;
+    });
+  });
+
+  return Array.from(productMap.values()).sort((a, b) => {
+    if (b.totalQuantity !== a.totalQuantity) {
+      return b.totalQuantity - a.totalQuantity;
+    }
+
+    return b.totalAmount - a.totalAmount;
+  });
+}, [orders, developerModeCustomerIds, overallProductSearchTerm]);
+
+
+
+const customerProductSummary = useMemo(() => {
+  const productMap = new Map();
+
+  filteredOrdersForView.forEach((order) => {
+    if (order.is_cancelled) return;
+
+    (order.items || []).forEach((item) => {
+      const itemName = String(item.name || "").trim();
+      const itemCategory = String(item.category || "").trim() || "미분류";
+
+      if (!itemName) return;
+      if (itemName === "기타" || itemCategory === "기타") return;
+
+      const key = itemName;
+
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          key,
+          name: itemName,
+          category: itemCategory,
+          totalQuantity: 0,
+          totalAmount: 0,
+          orderCount: 0,
+        });
+      }
+
+      const current = productMap.get(key);
+      current.totalQuantity += Number(item.quantity || 0);
+      current.totalAmount += Number(item.amount || 0);
+      current.orderCount += 1;
+    });
+  });
+
+  const groupedMap = new Map();
+
+  Array.from(productMap.values()).forEach((item) => {
+    const category = item.category || "미분류";
+
+    if (!groupedMap.has(category)) {
+      groupedMap.set(category, []);
+    }
+
+    groupedMap.get(category).push(item);
+  });
+
+  return Array.from(groupedMap.entries())
+    .map(([category, items]) => ({
+      category,
+      items: items.sort((a, b) => b.totalQuantity - a.totalQuantity),
+    }))
+    .sort((a, b) => {
+      const aIndex = categoryOrder.indexOf(a.category);
+      const bIndex = categoryOrder.indexOf(b.category);
+
+      if (aIndex === -1 && bIndex === -1) {
+        return a.category.localeCompare(b.category, "ko");
+      }
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+
+      return aIndex - bIndex;
+    });
+}, [filteredOrdersForView]);
+
+
+const filteredCustomerProductSummary = useMemo(() => {
+  const keyword = customerProductSearchTerm.trim().toLowerCase();
+
+  if (!keyword) return customerProductSummary;
+
+  return customerProductSummary
+    .map((group) => {
+      const filteredItems = group.items.filter((item) =>
+        item.name.toLowerCase().includes(keyword)
+      );
+
+      return {
+        ...group,
+        items: filteredItems,
+      };
+    })
+    .filter((group) => group.items.length > 0);
+}, [customerProductSummary, customerProductSearchTerm]);
+
+
+
+const customerProductRanking = useMemo(() => {
+  const keyword = customerProductSearchTerm.trim().toLowerCase();
+  const productMap = new Map();
+
+  filteredOrdersForView.forEach((order) => {
+    if (order.is_cancelled) return;
+
+    (order.items || []).forEach((item) => {
+      const itemName = String(item.name || "").trim();
+      const itemCategory = String(item.category || "").trim() || "미분류";
+
+      if (!itemName) return;
+      if (itemName === "기타" || itemCategory === "기타") return;
+      if (keyword && !itemName.toLowerCase().includes(keyword)) return;
+
+      const key = itemName;
+
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          key,
+          name: itemName,
+          category: itemCategory,
+          totalQuantity: 0,
+          totalAmount: 0,
+          orderCount: 0,
+        });
+      }
+
+      const current = productMap.get(key);
+      current.totalQuantity += Number(item.quantity || 0);
+      current.totalAmount += Number(item.amount || 0);
+      current.orderCount += 1;
+    });
+  });
+
+  return Array.from(productMap.values()).sort((a, b) => {
+    if (b.totalQuantity !== a.totalQuantity) {
+      return b.totalQuantity - a.totalQuantity;
+    }
+
+    return b.totalAmount - a.totalAmount;
+  });
+}, [filteredOrdersForView, customerProductSearchTerm]);
+
+
+
+useEffect(() => {
+  const keyword = customerProductSearchTerm.trim();
+
+  if (!keyword) {
+    setOpenCustomerProductCategories({});
+    return;
+  }
+
+  const nextOpenState = {};
+  filteredCustomerProductSummary.forEach((group) => {
+    nextOpenState[group.category] = true;
+  });
+
+  setOpenCustomerProductCategories(nextOpenState);
+}, [customerProductSearchTerm, filteredCustomerProductSummary]);
+
+
+useEffect(() => {
+  const keyword = overallProductSearchTerm.trim();
+
+  if (!keyword) {
+    setOpenOverallProductCategories({});
+    return;
+  }
+
+  const nextOpenState = {};
+  filteredOverallProductSummary.forEach((group) => {
+    nextOpenState[group.category] = true;
+  });
+
+  setOpenOverallProductCategories(nextOpenState);
+}, [overallProductSearchTerm, filteredOverallProductSummary]);
 
 const overallCustomerBreakdown = useMemo(() => {
   const summaryMap = new Map();
@@ -2595,6 +2946,308 @@ const formatDateTime = (value) => {
 )}
       </div>
     )}
+  </div>
+) : null}
+
+
+{isDeveloperMode && isDeveloperUnlocked ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">전체 거래처 품목 집계</div>
+    <p className="mt-2 text-sm text-slate-600">
+      개발자 모드를 제외한 전체 거래처 기준 품목별 총 판수와 총 판매금액입니다.
+    </p>
+
+    <button
+      type="button"
+      onClick={() => setShowOverallProductSummary((prev) => !prev)}
+      className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900"
+    >
+      {showOverallProductSummary ? "품목별 집계 닫기" : "품목별 집계 보기"}
+    </button>
+
+    {showOverallProductSummary ? (
+  <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
+    <input
+      type="text"
+      value={overallProductSearchTerm}
+      onChange={(e) => setOverallProductSearchTerm(e.target.value)}
+      placeholder="품목명을 검색하세요"
+      className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+    />
+
+    <button
+      type="button"
+      onClick={() => setIsOverallProductRankingView((prev) => !prev)}
+      className={`w-full rounded-2xl px-4 py-3 text-sm font-semibold border ${
+        isOverallProductRankingView
+          ? "bg-slate-900 text-white border-slate-900"
+          : "bg-white text-slate-900 border-slate-300"
+      }`}
+    >
+      {isOverallProductRankingView ? "카테고리 보기로 돌아가기" : "전체 판매순 보기"}
+    </button>
+
+    {isOverallProductRankingView ? (
+      overallProductRanking.length === 0 ? (
+        <div className="text-sm text-slate-500">
+          검색 결과가 없습니다.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {overallProductRanking.map((item, index) => (
+            <div
+              key={item.key}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-500">
+                    {index + 1}위
+                  </div>
+                  <div className="mt-1 text-base font-bold text-slate-900">
+                    {item.name}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-500">
+                    {item.category}
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500">
+                    주문 반영 {item.orderCount}건
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <div className="text-xs text-slate-500">총 판수</div>
+                  <div className="text-base font-semibold text-slate-900">
+                    {item.totalQuantity}판
+                  </div>
+
+                  <div className="mt-2 text-xs text-slate-500">총 금액</div>
+                  <div className="text-base font-bold text-slate-900">
+                    {formatCurrency(item.totalAmount)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    ) : filteredOverallProductSummary.length === 0 ? (
+      <div className="text-sm text-slate-500">
+        검색 결과가 없습니다.
+      </div>
+    ) : (
+      filteredOverallProductSummary.map((group) => {
+        const isOpen = !!openOverallProductCategories[group.category];
+
+        return (
+          <div
+            key={group.category}
+            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+          >
+            <button
+              type="button"
+              onClick={() => toggleOverallProductCategory(group.category)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <div className="text-base font-bold text-slate-900">
+                {group.category}
+              </div>
+
+              <div className="shrink-0 text-sm font-semibold text-slate-500">
+                {isOpen ? "접기" : "펼치기"}
+              </div>
+            </button>
+
+            {isOpen ? (
+              <div className="mt-3 space-y-3">
+                {group.items.map((item) => (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-slate-200 bg-white p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {item.name}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          주문 반영 {item.orderCount}건
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <div className="text-xs text-slate-500">총 판수</div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {item.totalQuantity}판
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-500">총 금액</div>
+                        <div className="text-sm font-bold text-slate-900">
+                          {formatCurrency(item.totalAmount)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        );
+      })
+    )}
+  </div>
+) : null}
+  </div>
+) : null}
+
+
+{isDeveloperMode && isDeveloperUnlocked && developerCustomerId ? (
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+    <div className="text-lg font-bold text-slate-900">선택 거래처 품목 집계</div>
+    <p className="mt-2 text-sm text-slate-600">
+      현재 선택한 거래처 기준 품목별 총 판수와 총 판매금액입니다.
+    </p>
+
+    <button
+      type="button"
+      onClick={() => setShowCustomerProductSummary((prev) => !prev)}
+      className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900"
+    >
+      {showCustomerProductSummary ? "거래처 품목 집계 닫기" : "거래처 품목 집계 보기"}
+    </button>
+
+    {showCustomerProductSummary ? (
+      <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
+        <input
+          type="text"
+          value={customerProductSearchTerm}
+          onChange={(e) => setCustomerProductSearchTerm(e.target.value)}
+          placeholder="품목명을 검색하세요"
+          className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+        />
+
+        <button
+          type="button"
+          onClick={() => setIsCustomerProductRankingView((prev) => !prev)}
+          className={`w-full rounded-2xl px-4 py-3 text-sm font-semibold border ${
+            isCustomerProductRankingView
+              ? "bg-slate-900 text-white border-slate-900"
+              : "bg-white text-slate-900 border-slate-300"
+          }`}
+        >
+          {isCustomerProductRankingView ? "카테고리 보기로 돌아가기" : "전체 판매순 보기"}
+        </button>
+
+        {isCustomerProductRankingView ? (
+          customerProductRanking.length === 0 ? (
+            <div className="text-sm text-slate-500">
+              검색 결과가 없습니다.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {customerProductRanking.map((item, index) => (
+                <div
+                  key={item.key}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-500">
+                        {index + 1}위
+                      </div>
+                      <div className="mt-1 text-base font-bold text-slate-900">
+                        {item.name}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-500">
+                        {item.category}
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500">
+                        주문 반영 {item.orderCount}건
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <div className="text-xs text-slate-500">총 판수</div>
+                      <div className="text-base font-semibold text-slate-900">
+                        {item.totalQuantity}판
+                      </div>
+
+                      <div className="mt-2 text-xs text-slate-500">총 금액</div>
+                      <div className="text-base font-bold text-slate-900">
+                        {formatCurrency(item.totalAmount)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : filteredCustomerProductSummary.length === 0 ? (
+          <div className="text-sm text-slate-500">
+            검색 결과가 없습니다.
+          </div>
+        ) : (
+          filteredCustomerProductSummary.map((group) => {
+            const isOpen = !!openCustomerProductCategories[group.category];
+
+            return (
+              <div
+                key={group.category}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleCustomerProductCategory(group.category)}
+                  className="flex w-full items-center justify-between gap-3 text-left"
+                >
+                  <div className="text-base font-bold text-slate-900">
+                    {group.category}
+                  </div>
+
+                  <div className="shrink-0 text-sm font-semibold text-slate-500">
+                    {isOpen ? "접기" : "펼치기"}
+                  </div>
+                </button>
+
+                {isOpen ? (
+                  <div className="mt-3 space-y-3">
+                    {group.items.map((item) => (
+                      <div
+                        key={item.key}
+                        className="rounded-xl border border-slate-200 bg-white p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-900">
+                              {item.name}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              주문 반영 {item.orderCount}건
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 text-right">
+                            <div className="text-xs text-slate-500">총 판수</div>
+                            <div className="text-sm font-semibold text-slate-900">
+                              {item.totalQuantity}판
+                            </div>
+
+                            <div className="mt-1 text-xs text-slate-500">총 금액</div>
+                            <div className="text-sm font-bold text-slate-900">
+                              {formatCurrency(item.totalAmount)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
+        )}
+      </div>
+    ) : null}
   </div>
 ) : null}
 
