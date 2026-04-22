@@ -284,87 +284,78 @@ function generateOrderNumber() {
   return `ORD-${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
 }
 
+async function fetchPaymentsFromApi({ customerId, password }) {
+  const query = customerId
+    ? `?customerId=${encodeURIComponent(customerId)}`
+    : "";
 
-async function fetchPayments() {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?select=id,customer_id,amount,memo,created_at,order_id,order_number,payment_type&order=created_at.desc`,
-    {
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    let errorBody = null;
-    try {
-      errorBody = await response.json();
-    } catch {
-      errorBody = { message: await response.text() };
-    }
-
-    const error = new Error(errorBody?.message || "입금 목록 조회 실패");
-    throw error;
-  }
-
-  return response.json();
-}
-
-
-async function savePaymentToSupabase(payload) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/payments`, {
-    method: "POST",
+  const response = await fetch(`/api/payments/list${query}`, {
+    method: "GET",
     headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation"
+      "x-developer-password": password,
     },
-    body: JSON.stringify(payload)
   });
 
-  if (!response.ok) {
-    let errorBody = null;
-    try {
-      errorBody = await response.json();
-    } catch {
-      errorBody = { message: await response.text() };
-    }
-
-    const error = new Error(errorBody?.message || "입금 저장 실패");
-    throw error;
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
   }
 
-  return response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "입금 목록 조회 실패");
+  }
+
+  return data;
 }
 
-async function deletePaymentFromSupabase(paymentId) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/payments?id=eq.${paymentId}`,
-    {
-      method: "DELETE",
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        Prefer: "return=representation"
-      }
-    }
-  );
+async function savePaymentToApi(payload, password) {
+  const response = await fetch("/api/payments/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-developer-password": password,
+    },
+    body: JSON.stringify(payload),
+  });
 
-  if (!response.ok) {
-    let errorBody = null;
-    try {
-      errorBody = await response.json();
-    } catch {
-      errorBody = { message: await response.text() };
-    }
-
-    const error = new Error(errorBody?.message || "입금 삭제 실패");
-    throw error;
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
   }
 
-  return response;
+  if (!response.ok) {
+    throw new Error(data?.message || "입금 저장 실패");
+  }
+
+  return data;
+}
+
+async function deletePaymentFromApi(paymentId, password) {
+  const response = await fetch("/api/payments/delete", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-developer-password": password,
+    },
+    body: JSON.stringify({ paymentId }),
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || "입금 삭제 실패");
+  }
+
+  return data;
 }
 
 export default function SeedlingOrderWebApp() {
@@ -506,7 +497,7 @@ const sortedCustomers = [...customers].sort((a, b) => {
   return 0;
 });
   const DEV_CUSTOMER_NAME = "개발자 모드";
-const DEV_PASSWORD = "2908";
+
 const isDeveloperMode = selectedCustomer?.name === DEV_CUSTOMER_NAME;
 
   const customerType = selectedCustomer?.price_type || "A";
@@ -620,7 +611,9 @@ useEffect(() => {
 
     const [ordersData, paymentsData] = await Promise.all([
       fetchOrders(),
-      fetchPayments()
+      isDeveloperUnlocked && developerPassword
+        ? fetchPaymentsFromApi({ password: developerPassword })
+        : Promise.resolve([]),
     ]);
 
     setOrders(ordersData);
@@ -1767,14 +1760,33 @@ const getCustomerNameById = (customerId) => {
 
   const totalQuantity = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  const unlockDeveloperMode = () => {
-  if (developerPassword === DEV_PASSWORD) {
+  const unlockDeveloperMode = async () => {
+  try {
+    const res = await fetch("/api/developer-auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password: developerPassword }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      alert(data?.message || "비밀번호가 올바르지 않습니다.");
+      return;
+    }
+
     setIsDeveloperUnlocked(true);
-  } else {
-    alert("비밀번호가 올바르지 않습니다.");
+  } catch (error) {
+    console.error(error);
+    alert("개발자 인증 중 오류가 발생했습니다.");
   }
 };
-
+useEffect(() => {
+  if (!isDeveloperUnlocked || !developerPassword) return;
+  loadSummaryData();
+}, [isDeveloperUnlocked, developerPassword]);
 
 const createPaymentRecord = async ({
   customerId,
@@ -1784,14 +1796,21 @@ const createPaymentRecord = async ({
   orderNumber = null,
   paymentType = "manual",
 }) => {
-  const saved = await savePaymentToSupabase({
-    customer_id: customerId === "manual" ? null : Number(customerId),
-    amount: Number(amount),
-    memo,
-    order_id: orderId,
-    order_number: orderNumber,
-    payment_type: paymentType,
-  });
+  if (!isDeveloperUnlocked || !developerPassword) {
+    throw new Error("개발자 인증이 필요합니다.");
+  }
+
+  const saved = await savePaymentToApi(
+    {
+      customer_id: customerId === "manual" ? null : Number(customerId),
+      amount: Number(amount),
+      memo,
+      order_id: orderId,
+      order_number: orderNumber,
+      payment_type: paymentType,
+    },
+    developerPassword
+  );
 
   await loadSummaryData();
   return saved;
@@ -2016,15 +2035,20 @@ const handleDeletePayment = async (paymentId) => {
   if (!ok) return;
 
   try {
+    if (!isDeveloperUnlocked || !developerPassword) {
+      alert("개발자 인증이 필요합니다.");
+      return;
+    }
+
     setDeletingPaymentId(paymentId);
 
-    await deletePaymentFromSupabase(paymentId);
+    await deletePaymentFromApi(paymentId, developerPassword);
     await loadSummaryData();
 
     alert("입금 내역이 삭제되었습니다.");
   } catch (error) {
     console.error(error);
-    alert("입금 내역 삭제에 실패했습니다.");
+    alert(error.message || "입금 내역 삭제에 실패했습니다.");
   } finally {
     setDeletingPaymentId(null);
   }
