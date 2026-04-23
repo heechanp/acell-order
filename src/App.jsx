@@ -1131,9 +1131,13 @@ useEffect(() => {
   }, [filteredProducts]);
 
   const visibleCategories = useMemo(() => {
-    const categories = Object.keys(productsByCategory);
-    return categoryOrder.filter((category) => categories.includes(category));
-  }, [productsByCategory]);
+  const categories = Object.keys(productsByCategory);
+
+  const ordered = categoryOrder.filter((category) => categories.includes(category));
+  const unordered = categories.filter((category) => !categoryOrder.includes(category));
+
+  return [...ordered, ...unordered];
+}, [productsByCategory]);
 
   const orderItems = useMemo(() => {
   return productsWithStatus
