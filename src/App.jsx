@@ -310,6 +310,29 @@ async function fetchPaymentsFromApi({ customerId, password }) {
   return data;
 }
 
+async function fetchPaymentSummary(customerId) {
+  const query = customerId
+    ? `?customerId=${encodeURIComponent(customerId)}`
+    : "";
+
+  const response = await fetch(`/api/payments/summary${query}`, {
+    method: "GET",
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || "입금 합계 조회 실패");
+  }
+
+  return Number(data?.totalPaid || 0);
+}
+
 async function savePaymentToApi(payload, password) {
   const response = await fetch("/api/payments/create", {
     method: "POST",
@@ -422,6 +445,9 @@ const [showCustomerProductSummary, setShowCustomerProductSummary] = useState(fal
 const [customerProductSearchTerm, setCustomerProductSearchTerm] = useState("");
 const [openCustomerProductCategories, setOpenCustomerProductCategories] = useState({});
 const [isCustomerProductRankingView, setIsCustomerProductRankingView] = useState(false);
+
+const [receiptTotalPaid, setReceiptTotalPaid] = useState(0);
+const [receiptTotalOrdered, setReceiptTotalOrdered] = useState(0);
 
 const toggleCustomerProductCategory = (category) => {
   setOpenCustomerProductCategories((prev) => ({
@@ -2125,6 +2151,18 @@ customer_name: isManualCustomerOrder
   if (isSupabaseConfigured()) {
     const savedOrders = await saveOrderToSupabase(payload);
     await loadSummaryData();
+    
+    let nextReceiptPaid = 0;
+
+try {
+  const summaryCustomerId = isManualCustomerOrder
+    ? "manual"
+    : String(selectedCustomer.id);
+
+  nextReceiptPaid = await fetchPaymentSummary(summaryCustomerId);
+} catch (error) {
+  console.error("주문완료 화면 입금 합계 조회 실패:", error);
+}
 
     if (Array.isArray(savedOrders) && savedOrders.length > 0) {
       setSelectedReceiptOrder(savedOrders[0]);
@@ -2134,7 +2172,11 @@ customer_name: isManualCustomerOrder
         created_at: new Date().toISOString(),
       });
     }
+    setReceiptTotalPaid(nextReceiptPaid);
+
   } else {
+      setReceiptTotalPaid(0);
+
     console.log("[Demo mode] Supabase 미설정 상태입니다.", payload);
 
     setSelectedReceiptOrder({
@@ -2397,14 +2439,14 @@ const formatDateTime = (value) => {
     <div className="flex items-center justify-between">
       <span className="text-base text-slate-600">누적 입금액</span>
       <span className="text-base font-semibold text-slate-900">
-        {formatCurrency(selectedCustomerSummary.totalPaid)}
+{formatCurrency(receiptTotalPaid)}
       </span>
     </div>
 
     <div className="flex items-center justify-between">
       <span className="text-base font-bold text-slate-900">현재 미수금</span>
       <span className="text-lg font-bold text-slate-900">
-        {formatCurrency(selectedCustomerSummary.balance)}
+        {formatCurrency(selectedCustomerSummary.totalOrdered - receiptTotalPaid)}
       </span>
     </div>
   </div>
