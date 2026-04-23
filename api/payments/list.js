@@ -1,5 +1,5 @@
-import { supabaseAdmin } from "../../lib/supabaseAdmin.js";
-import { requireDeveloperAuth } from "../../lib/requireDeveloperAuth.js";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
+import { requireDeveloperAuth } from "../../lib/requireDeveloperAuth";
 
 console.log("payments/list module loaded");
 
