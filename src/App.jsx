@@ -306,7 +306,7 @@ async function fetchPaymentsFromApi({ customerId, password }) {
   if (!response.ok) {
     throw new Error(data?.message || "입금 목록 조회 실패");
   }
-
+console.log("payments/list =>", response.status, data);
   return data;
 }
 
