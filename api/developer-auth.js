@@ -7,15 +7,16 @@ export default async function handler(req, res) {
     const { password } = req.body || {};
     const expected = process.env.DEV_ADMIN_PASSWORD;
 
-    if (!expected) {
-      return res.status(500).json({ message: "DEV_ADMIN_PASSWORD가 없습니다." });
-    }
+    const inputPassword = String(password || "");
+    const savedPassword = String(expected || "");
 
-    if (!password || password !== expected) {
-      return res.status(401).json({ message: "비밀번호가 올바르지 않습니다." });
-    }
-
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({
+      inputPassword,
+      savedPassword,
+      inputLength: inputPassword.length,
+      savedLength: savedPassword.length,
+      same: inputPassword === savedPassword,
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message || "개발자 인증 실패" });
   }
