@@ -2,7 +2,7 @@ export const productsA = [
   { id: 1, category: "오이류", name: "청오이", price: 12000, unit: "판", status: "active" },
   { id: 2, category: "오이류", name: "가시오이", price: 10000, unit: "판", status: "active" },
   { id: 3, category: "오이류", name: "조선오이", price: 10000, unit: "판", status: "active" },
-  { id: 4, category: "오이류", name: "노각오이", price: 12000, unit: "판", status: "active" },
+  { id: 4, category: "오이류", name: "노각오이", price: 15000, unit: "판", status: "active" },
   { id: 5, category: "오이류", name: "미니오이", price: 15000, unit: "판", status: "active" },
 
   { id: 10, category: "박류", name: "고지박", price: 12000, unit: "판", status: "active" },
@@ -33,6 +33,10 @@ export const productsA = [
   { id: 42, category: "고추류", name: "비타민 고추", price: 16000, unit: "판", status: "active" },
   { id: 43, category: "고추류", name: "엄지풋고추", price: 15000, unit: "판", status: "active" },
   { id: 44, category: "고추류", name: "칼탄 열풍", price: 21000, unit: "판", status: "active" },
+  { id: 45, category: "고추류", name: "피망", price: 15000, unit: "판", status: "active" },
+  { id: 46, category: "고추류", name: "파프리카 노랑", price: 20000, unit: "판", status: "active" },
+  { id: 47, category: "고추류", name: "파프리카 빨강", price: 20000, unit: "판", status: "active" },
+  { id: 48, category: "고추류", name: "파프리카 주황", price: 20000, unit: "판", status: "active" },
 
   { id: 51, category: "토마토류", name: "흑토마토", price: 25000, unit: "판", status: "active" },
   { id: 200, category: "토마토류", name: "완숙토마토", price: 12000, unit: "판", status: "active" },
