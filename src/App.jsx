@@ -535,9 +535,6 @@ const productsWithStatus = products.map((product) => ({
   status: productStatus[String(product.id)] ?? product.status ?? "active",
 }));
   
-const editableProducts = useMemo(() => {
-  return editProductsWithStatus.filter((product) => product.status !== "inactive");
-}, [editProductsWithStatus]);
 
 
 const developerSelectedCustomer = customers.find(
@@ -552,6 +549,11 @@ const editProductsWithStatus = editProducts.map((product) => ({
   ...product,
   status: productStatus[String(product.id)] ?? product.status ?? "active",
 }));
+
+const editableProducts = useMemo(() => {
+  return editProductsWithStatus.filter((product) => product.status !== "inactive");
+}, [editProductsWithStatus]);
+
 
 const filteredEditableProducts = useMemo(() => {
   const keyword = editItemSearchTerm.trim().toLowerCase();
