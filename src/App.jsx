@@ -536,8 +536,22 @@ const productsWithStatus = products.map((product) => ({
 }));
   
 const editableProducts = useMemo(() => {
-  return productsWithStatus.filter((product) => product.status !== "inactive");
-}, [productsWithStatus]);
+  return editProductsWithStatus.filter((product) => product.status !== "inactive");
+}, [editProductsWithStatus]);
+
+
+const developerSelectedCustomer = customers.find(
+  (c) => String(c.id) === String(developerCustomerId)
+);
+
+const editCustomerType = developerSelectedCustomer?.price_type || "A";
+
+const editProducts = editCustomerType === "A" ? productsA : productsB;
+
+const editProductsWithStatus = editProducts.map((product) => ({
+  ...product,
+  status: productStatus[String(product.id)] ?? product.status ?? "active",
+}));
 
 const filteredEditableProducts = useMemo(() => {
   const keyword = editItemSearchTerm.trim().toLowerCase();
