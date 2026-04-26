@@ -3731,7 +3731,7 @@ const formatDateTime = (value) => {
       {filteredEditableProducts.length === 0 ? (
         <div className="p-4 text-sm text-slate-500">검색 결과가 없습니다.</div>
       ) : (
-        filteredEditableProducts.slice(0, 20).map((product) => (
+        filteredEditableProducts.slice(0, 50).map((product) => (
           <button
             key={`edit-add-${product.id}`}
             type="button"
