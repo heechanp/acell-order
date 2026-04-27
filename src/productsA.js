@@ -73,7 +73,7 @@ export const productsA = [
   { id: 83, category: "참외·수박·멜론·딸기", name: "애플수박", price: 25000, unit: "판", status: "active" },
   { id: 84, category: "참외·수박·멜론·딸기", name: "망고수박", price: 30000, unit: "판", status: "active" },
   { id: 85, category: "참외·수박·멜론·딸기", name: "일반수박", price: 12000, unit: "판", status: "active" },
-  { id: 86, category: "참외·수박·멜론·딸기", name: "메론", price: 15000, unit: "판", status: "active" },
+  { id: 86, category: "참외·수박·멜론·딸기", name: "메론", price: 20000, unit: "판", status: "active" },
   { id: 87, category: "참외·수박·멜론·딸기", name: "딸기(40포트)", price: 40000, unit: "판", status: "active" },
 
   { id: 90, category: "옥수수류", name: "옥수수 72구(두 알맹이씩)", price: 9000, unit: "판", status: "active" },
