@@ -39,7 +39,7 @@ export const productsA = [
   { id: 47, category: "고추류", name: "파프리카 노랑", price: 20000, unit: "판", status: "active" },
   { id: 48, category: "고추류", name: "파프리카 빨강", price: 20000, unit: "판", status: "active" },
   { id: 49, category: "고추류", name: "파프리카 주황", price: 20000, unit: "판", status: "active" },
-  { id: 50, category: "고추류", name: "오크라", price: 12000, unit: "판", status: "active" },
+  { id: 50, category: "고추류", name: "오크라", price: 15000, unit: "판", status: "active" },
 
   { id: 51, category: "토마토류", name: "흑토마토", price: 25000, unit: "판", status: "active" },
   { id: 200, category: "토마토류", name: "완숙토마토", price: 12000, unit: "판", status: "active" },
