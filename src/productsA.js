@@ -8,7 +8,8 @@ export const productsA = [
   { id: 10, category: "박류", name: "고지박", price: 12000, unit: "판", status: "active" },
   
   { id: 12, category: "박류", name: "수세미", price: 12000, unit: "판", status: "active" },
-  { id: 13, category: "박류", name: "여주", price: 24000, unit: "판", status: "active" },
+  { id: 13, category: "박류", name: "여주(포트)", price: 24000, unit: "판", status: "active" },
+  { id: 14, category: "박류", name: "여주 40구", price: 20000, unit: "판", status: "active" },
 
   { id: 20, category: "호박류", name: "애호박", price: 12000, unit: "판", status: "active" },
   { id: 21, category: "호박류", name: "풋호박", price: 10000, unit: "판", status: "active" },
