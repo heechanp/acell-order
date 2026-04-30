@@ -2730,7 +2730,7 @@ const formatDateTime = (value) => {
 ) : null}
 
 {selectedCustomer && isDeveloperMode ? (
-  <div className="mt-4 rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">거래처 요약</div>
 
 
@@ -2784,8 +2784,8 @@ const formatDateTime = (value) => {
 </select>
 
 {developerCustomerId ? (
-  <div className="mt-4 grid grid-cols-3 gap-2">
-    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-center">
+  <div className="mt-6 grid grid-cols-3 gap-2">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
       <div className="text-xs text-slate-500">총 주문</div>
       <div className="mt-1 text-sm font-bold text-slate-900">
         {formatCurrency(
@@ -2796,7 +2796,7 @@ const formatDateTime = (value) => {
       </div>
     </div>
 
-    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-center">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
       <div className="text-xs text-slate-500">총 입금</div>
       <div className="mt-1 text-sm font-bold text-slate-900">
         {formatCurrency(
@@ -2807,7 +2807,7 @@ const formatDateTime = (value) => {
       </div>
     </div>
 
-    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-center">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
       <div className="text-xs text-slate-500">미수금</div>
       <div className="mt-1 text-sm font-bold text-slate-900">
         {formatCurrency(
