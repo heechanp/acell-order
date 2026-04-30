@@ -413,6 +413,7 @@ const [developerCustomerId, setDeveloperCustomerId] = useState("all");
 const [productStatus, setProductStatus] = useState({});
 
 const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+const [cancelReason, setCancelReason] = useState("");
 
 
 const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -421,10 +422,7 @@ const [editItemSearchTerm, setEditItemSearchTerm] = useState("");
 
 const [editingOrderItems, setEditingOrderItems] = useState([]);
 const [editingOrderMemo, setEditingOrderMemo] = useState("");
-
-const [editingReason, setEditingReason] = useState("단순 수량 변경");
-const [cancelReason, setCancelReason] = useState("거래처 요청 취소");
-
+const [editingReason, setEditingReason] = useState("");
 const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 const [showOriginalOrder, setShowOriginalOrder] = useState(false);
 
@@ -682,23 +680,28 @@ useEffect(() => {
   }
 };
 
+
+const DEFAULT_EDIT_REASON = "거래처 요청으로 수량 정정";
+const DEFAULT_CANCEL_REASON = "거래처 요청으로 주문 취소";
+
 useEffect(() => {
   if (!selectedOrder) {
     setIsEditingOrder(false);
     setEditingOrderItems([]);
     setEditingOrderMemo("");
-    setEditingReason("");
+        setEditingReason(DEFAULT_EDIT_REASON);
     setShowOriginalOrder(false);
     return;
   }
 
   setEditingOrderItems(selectedOrder.items || []);
   setEditingOrderMemo(selectedOrder.memo || "");
-  setEditingReason("");
+      setEditingReason(DEFAULT_EDIT_REASON);
+
   setShowOriginalOrder(false);
 
   setIsCancellingOrder(false);
-setCancelReason("");
+setCancelReason(DEFAULT_CANCEL_REASON);
 
 }, [selectedOrder]);
 
