@@ -2782,43 +2782,6 @@ const formatDateTime = (value) => {
   ))}
 </select>
 
-{developerCustomerId ? (
-  <div className="mt-6 grid grid-cols-3 gap-2">
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-      <div className="text-xs text-slate-500">총 주문</div>
-      <div className="mt-1 text-sm font-bold text-slate-900">
-        {formatCurrency(
-          developerCustomerId === "all"
-            ? overallCustomerSummary.totalOrdered
-            : developerCustomerSummary.totalOrdered
-        )}
-      </div>
-    </div>
-
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-      <div className="text-xs text-slate-500">총 입금</div>
-      <div className="mt-1 text-sm font-bold text-slate-900">
-        {formatCurrency(
-          developerCustomerId === "all"
-            ? overallCustomerSummary.totalPaid
-            : developerCustomerSummary.totalPaid
-        )}
-      </div>
-    </div>
-
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-      <div className="text-xs text-slate-500">미수금</div>
-      <div className="mt-1 text-sm font-bold text-slate-900">
-        {formatCurrency(
-          developerCustomerId === "all"
-            ? overallCustomerSummary.balance
-            : developerCustomerSummary.balance
-        )}
-      </div>
-    </div>
-  </div>
-) : null}
-
   </div>
 ) : null}
 
