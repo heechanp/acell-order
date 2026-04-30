@@ -1091,22 +1091,21 @@ const filteredProducts = useMemo(() => {
 
 
 const filteredOrdersForView = useMemo(() => {
-  if (!developerCustomerId) return [];
 
   const keyword = orderSearchTerm.trim().toLowerCase();
 
   return orders
-    .filter((order) => {
-      if (developerCustomerId === "all") {
-        return true;
-      }
+    .filter((order) => {.filter((order) => {
+  if (!developerCustomerId || developerCustomerId === "all") {
+    return true;
+  }
 
-      if (developerCustomerId === "manual") {
-        return order.customer_id == null;
-      }
+  if (developerCustomerId === "manual") {
+    return order.customer_id == null;
+  }
 
-      return String(order.customer_id) === String(developerCustomerId);
-    })
+  return String(order.customer_id) === String(developerCustomerId);
+})
     .filter((order) => {
       if (!keyword) return true;
 
@@ -2731,7 +2730,7 @@ const formatDateTime = (value) => {
 ) : null}
 
 {selectedCustomer && isDeveloperMode ? (
-  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+  <div className="mt-4 rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">거래처 요약</div>
 
 
@@ -2825,7 +2824,7 @@ const formatDateTime = (value) => {
 ) : null}
 
 {isDeveloperMode && isDeveloperUnlocked ? (
-  <div className="mt-5 rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+  <div className="mt-4 rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">입금 등록</div>
     <p className="mt-2 text-sm text-slate-600">
   위에서 선택한 거래처로 입금을 등록합니다.
