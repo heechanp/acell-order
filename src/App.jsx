@@ -413,7 +413,6 @@ const [developerCustomerId, setDeveloperCustomerId] = useState("all");
 const [productStatus, setProductStatus] = useState({});
 
 const [isCancellingOrder, setIsCancellingOrder] = useState(false);
-const [cancelReason, setCancelReason] = useState("");
 
 
 const [isEditingOrder, setIsEditingOrder] = useState(false);
@@ -422,7 +421,10 @@ const [editItemSearchTerm, setEditItemSearchTerm] = useState("");
 
 const [editingOrderItems, setEditingOrderItems] = useState([]);
 const [editingOrderMemo, setEditingOrderMemo] = useState("");
-const [editingReason, setEditingReason] = useState("");
+
+const [editingReason, setEditingReason] = useState("단순 수량 변경");
+const [cancelReason, setCancelReason] = useState("거래처 요청 취소");
+
 const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 const [showOriginalOrder, setShowOriginalOrder] = useState(false);
 
