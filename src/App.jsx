@@ -449,6 +449,8 @@ const [isCustomerProductRankingView, setIsCustomerProductRankingView] = useState
 const [receiptTotalPaid, setReceiptTotalPaid] = useState(0);
 const [receiptTotalOrdered, setReceiptTotalOrdered] = useState(0);
 
+const settlementSummaryRef = useRef(null);
+
 const toggleCustomerProductCategory = (category) => {
   setOpenCustomerProductCategories((prev) => ({
     ...prev,
@@ -601,6 +603,18 @@ const addItemToEditingOrder = (product) => {
   setEditItemSearchTerm("");
 };
 
+
+useEffect(() => {
+  if (!developerCustomerId) return;
+  if (!isDeveloperUnlocked) return;
+
+  setTimeout(() => {
+    settlementSummaryRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 150);
+}, [developerCustomerId, isDeveloperUnlocked]);
 
 useEffect(() => {
   async function loadProductStatuses() {
@@ -2867,7 +2881,7 @@ const formatDateTime = (value) => {
 
     {isDeveloperMode && isDeveloperUnlocked && developerTargetCustomerId ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
-    <div className="text-lg font-bold text-slate-900">거래처 정산 요약</div>
+    <div ref={settlementSummaryRef} className="text-lg font-bold text-slate-900">거래처 정산 요약</div>
     <p className="mt-2 text-sm text-slate-600">
       선택한 거래처의 누적 주문/입금 현황입니다.
     </p>
