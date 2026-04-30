@@ -2729,7 +2729,7 @@ const formatDateTime = (value) => {
 ) : null}
 
 {selectedCustomer && isDeveloperMode ? (
-  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+  <div className="mt-4 rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">거래처 요약</div>
 
 
