@@ -408,7 +408,7 @@ const [isDeveloperUnlocked, setIsDeveloperUnlocked] = useState(false);
 const [paymentPage, setPaymentPage] = useState(1);
 const [selectedPayment, setSelectedPayment] = useState(null);
 
-const [developerCustomerId, setDeveloperCustomerId] = useState("");
+const [developerCustomerId, setDeveloperCustomerId] = useState("all");
 
 const [productStatus, setProductStatus] = useState({});
 
