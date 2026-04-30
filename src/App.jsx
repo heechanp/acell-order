@@ -451,6 +451,8 @@ const [receiptTotalOrdered, setReceiptTotalOrdered] = useState(0);
 
 const settlementSummaryRef = useRef(null);
 
+const selectedOrderDetailRef = useRef(null);
+
 const toggleCustomerProductCategory = (category) => {
   setOpenCustomerProductCategories((prev) => ({
     ...prev,
@@ -615,6 +617,17 @@ useEffect(() => {
     });
   }, 150);
 }, [developerCustomerId, isDeveloperUnlocked]);
+
+useEffect(() => {
+  if (!selectedOrder) return;
+
+  setTimeout(() => {
+    selectedOrderDetailRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 100);
+}, [selectedOrder]);
 
 useEffect(() => {
   async function loadProductStatuses() {
@@ -3512,7 +3525,7 @@ const formatDateTime = (value) => {
 ) : null}
 
 {isDeveloperMode && isDeveloperUnlocked && selectedOrder ? (
-  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
+  <div ref={selectedOrderDetailRef} className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
     <div className="text-lg font-bold text-slate-900">선택한 주문 명세서</div>
 
 {selectedOrder?.is_edited ? (
