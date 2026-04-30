@@ -1091,21 +1091,20 @@ const filteredProducts = useMemo(() => {
 
 
 const filteredOrdersForView = useMemo(() => {
-
   const keyword = orderSearchTerm.trim().toLowerCase();
 
   return orders
-    .filter((order) => {.filter((order) => {
-  if (!developerCustomerId || developerCustomerId === "all") {
-    return true;
-  }
+    .filter((order) => {
+      if (!developerCustomerId || developerCustomerId === "all") {
+        return true;
+      }
 
-  if (developerCustomerId === "manual") {
-    return order.customer_id == null;
-  }
+      if (developerCustomerId === "manual") {
+        return order.customer_id == null;
+      }
 
-  return String(order.customer_id) === String(developerCustomerId);
-})
+      return String(order.customer_id) === String(developerCustomerId);
+    })
     .filter((order) => {
       if (!keyword) return true;
 
