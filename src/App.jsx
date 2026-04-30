@@ -389,7 +389,7 @@ const [selectedReceiptOrder, setSelectedReceiptOrder] = useState(null);
   const [orderViewCustomerId, setOrderViewCustomerId] = useState("");
 const [orderPage, setOrderPage] = useState(1);
 const [selectedOrder, setSelectedOrder] = useState(null);
-
+const [orderSearchTerm, setOrderSearchTerm] = useState("");
 
 const [paymentCustomerId, setPaymentCustomerId] = useState("");
 const [paymentAmount, setPaymentAmount] = useState("");
@@ -1093,17 +1093,32 @@ const filteredProducts = useMemo(() => {
 const filteredOrdersForView = useMemo(() => {
   if (!developerCustomerId) return [];
 
+  const keyword = orderSearchTerm.trim().toLowerCase();
+
   return orders
     .filter((order) => {
+      if (developerCustomerId === "all") {
+        return true;
+      }
+
       if (developerCustomerId === "manual") {
         return order.customer_id == null;
       }
 
       return String(order.customer_id) === String(developerCustomerId);
     })
+    .filter((order) => {
+      if (!keyword) return true;
+
+      return (
+        String(order.customer_name || "").toLowerCase().includes(keyword) ||
+        String(order.order_number || "").toLowerCase().includes(keyword) ||
+        String(order.memo || "").toLowerCase().includes(keyword)
+      );
+    })
     .slice()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-}, [orders, developerCustomerId]);
+}, [orders, developerCustomerId, orderSearchTerm]);
 
 
 const ORDERS_PER_PAGE = 5;
@@ -1124,6 +1139,7 @@ useEffect(() => {
   setSelectedOrder(null);
   setPaymentPage(1);
   setSelectedPayment(null);
+  setOrderSearchTerm("");
 
     setShowCustomerProductSummary(false);
   setCustomerProductSearchTerm("");
@@ -2756,13 +2772,13 @@ const formatDateTime = (value) => {
    <select
   value={developerCustomerId}
   onChange={(e) => setDeveloperCustomerId(e.target.value)}
-  className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
 >
-  <option value="">거래처를 선택하세요</option>
+  <option value="">거래처 선택</option>
+  <option value="all">전체 거래처 주문내역</option>
   <option value="manual">거래처 수동 주문</option>
-  {sortedCustomers.map((c) => (
-    <option key={c.id} value={c.id}>
-      {c.name}
+  {sortedCustomers.map((customer) => (
+    <option key={customer.id} value={customer.id}>
+      {customer.name}
     </option>
   ))}
 </select>
@@ -3365,7 +3381,24 @@ const formatDateTime = (value) => {
       <>
         <div className="mt-3 space-y-3">
 
-          
+          <div className="text-lg font-bold text-slate-900 mb-3">
+  {developerCustomerId === "all"
+    ? "전체 거래처 주문내역"
+    : developerCustomerId === "manual"
+    ? "거래처 수동 주문내역"
+    : `${developerSelectedCustomer?.name || ""} 주문내역`}
+</div>
+
+<input
+  value={orderSearchTerm}
+  onChange={(e) => {
+    setOrderSearchTerm(e.target.value);
+    setOrderPage(1);
+  }}
+  placeholder="거래처명, 주문번호, 메모 검색"
+  className="mb-3 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+/>
+
           {pagedOrders.map((order) => {
   const totalQty = Array.isArray(order.items)
     ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
@@ -3406,6 +3439,13 @@ const formatDateTime = (value) => {
       </span>
     ) : null}
   </div>
+
+
+{developerCustomerId === "all" ? (
+  <div className="mb-1 text-sm font-semibold text-slate-900">
+    거래처: {order.customer_name || "거래처명 없음"}
+  </div>
+) : null}
 
   <div className="mt-1 text-xs text-slate-500">
     주문번호: {order.order_number || "-"}
