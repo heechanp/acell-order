@@ -20,6 +20,7 @@ export const productsB = [
   { id: 26, category: "호박류", name: "조선호박", price: 10000, unit: "판", status: "active" },
 
   { id: 30, category: "고추류", name: "칼탄(조생강탄, 건고추)", price: 21000, unit: "판", status: "active" },
+  { id: 150, category: "고추류", name: "올복합 105구", price: 31000, unit: "판", status: "active" },
   { id: 31, category: "고추류", name: "미인보라(가지고추)", price: 25000, unit: "판", status: "active" },
   { id: 32, category: "고추류", name: "신초롱(청양고추)", price: 16000, unit: "판", status: "active" },
   { id: 33, category: "고추류", name: "혈조마일드(당조고추)", price: 25000, unit: "판", status: "active" },
