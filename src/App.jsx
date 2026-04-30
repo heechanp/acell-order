@@ -2772,6 +2772,7 @@ const formatDateTime = (value) => {
    <select
   value={developerCustomerId}
   onChange={(e) => setDeveloperCustomerId(e.target.value)}
+  className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
 >
   <option value="">거래처 선택</option>
   <option value="all">전체 거래처 주문내역</option>
@@ -2782,11 +2783,49 @@ const formatDateTime = (value) => {
     </option>
   ))}
 </select>
+
+{developerCustomerId ? (
+  <div className="mt-4 grid grid-cols-3 gap-2">
+    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-center">
+      <div className="text-xs text-slate-500">총 주문</div>
+      <div className="mt-1 text-sm font-bold text-slate-900">
+        {formatCurrency(
+          developerCustomerId === "all"
+            ? overallCustomerSummary.totalOrdered
+            : developerCustomerSummary.totalOrdered
+        )}
+      </div>
+    </div>
+
+    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-center">
+      <div className="text-xs text-slate-500">총 입금</div>
+      <div className="mt-1 text-sm font-bold text-slate-900">
+        {formatCurrency(
+          developerCustomerId === "all"
+            ? overallCustomerSummary.totalPaid
+            : developerCustomerSummary.totalPaid
+        )}
+      </div>
+    </div>
+
+    <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 text-center">
+      <div className="text-xs text-slate-500">미수금</div>
+      <div className="mt-1 text-sm font-bold text-slate-900">
+        {formatCurrency(
+          developerCustomerId === "all"
+            ? overallCustomerSummary.balance
+            : developerCustomerSummary.balance
+        )}
+      </div>
+    </div>
+  </div>
+) : null}
+
   </div>
 ) : null}
 
 {isDeveloperMode && isDeveloperUnlocked ? (
-  <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+  <div className="mt-5 rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
     <div className="text-lg font-bold text-slate-900">입금 등록</div>
     <p className="mt-2 text-sm text-slate-600">
   위에서 선택한 거래처로 입금을 등록합니다.
@@ -3440,12 +3479,6 @@ const formatDateTime = (value) => {
     ) : null}
   </div>
 
-
-{developerCustomerId === "all" ? (
-  <div className="mb-1 text-sm font-semibold text-slate-900">
-    거래처: {order.customer_name || "거래처명 없음"}
-  </div>
-) : null}
 
   <div className="mt-1 text-xs text-slate-500">
     주문번호: {order.order_number || "-"}
