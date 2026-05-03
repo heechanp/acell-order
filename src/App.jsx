@@ -2781,12 +2781,17 @@ const formatDateTime = (value) => {
     </p>
 
     <input
-      type="password"
-      value={developerPassword}
-      onChange={(e) => setDeveloperPassword(e.target.value)}
-      placeholder="비밀번호 입력"
-      className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
-    />
+  type="password"
+  value={developerPassword}
+  onChange={(e) => setDeveloperPassword(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && developerPassword.trim()) {
+      unlockDeveloperMode();
+    }
+  }}
+  placeholder="비밀번호 입력"
+  className="mt-3 h-14 w-full rounded-2xl border border-slate-300 px-4 text-base text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+/>
 
     <button
       onClick={unlockDeveloperMode}
