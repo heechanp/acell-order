@@ -545,17 +545,16 @@ const developerSelectedCustomer = customers.find(
   (c) => String(c.id) === String(developerCustomerId)
 );
 
-const editCustomerType = developerSelectedCustomer?.price_type || "A";
-
-
 const editingCustomer = customers.find(
   (c) => String(c.id) === String(selectedOrder?.customer_id)
 );
 
-const editCustomerType = editingCustomer?.price_type || "A";
+const editCustomerType =
+  editingCustomer?.price_type ||
+  developerSelectedCustomer?.price_type ||
+  "A";
 
 const editProducts = editCustomerType === "A" ? productsA : productsB;
-
 
 
 const editProductsWithStatus = editProducts.map((product) => ({
