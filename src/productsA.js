@@ -44,7 +44,6 @@ export const productsA = [
   { id: 50, category: "고추류", name: "오크라", price: 15000, unit: "판", status: "active" },
 
   { id: 51, category: "토마토류", name: "흑토마토", price: 25000, unit: "판", status: "active" },
-  { id: 200, category: "토마토류", name: "완숙 찰토마토", price: 15000, unit: "판", status: "active" },
   { id: 52, category: "토마토류", name: "흑대추방울토마토", price: 25000, unit: "판", status: "active" },
   { id: 53, category: "토마토류", name: "빨간대추방울토마토", price: 16000, unit: "판", status: "active" },
   { id: 54, category: "토마토류", name: "노란대추방울토마토", price: 16000, unit: "판", status: "active" },
