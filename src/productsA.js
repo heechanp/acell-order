@@ -35,6 +35,7 @@ export const productsA = [
   { id: 41, category: "고추류", name: "꽈리고추", price: 15000, unit: "판", status: "active" },
   { id: 42, category: "고추류", name: "비타민 고추", price: 16000, unit: "판", status: "active" },
   { id: 43, category: "고추류", name: "엄지풋고추", price: 15000, unit: "판", status: "active" },
+  { id: 300, category: "고추류", name: "할라피뇨고추", price: 15000, unit: "판", status: "active" },
   { id: 44, category: "고추류", name: "칼탄 열풍", price: 21000, unit: "판", status: "active" },
   { id: 45, category: "고추류", name: "피망 32구", price: 15000, unit: "판", status: "active" },
   { id: 46, category: "고추류", name: "피망 50구", price: 20000, unit: "판", status: "active" },
