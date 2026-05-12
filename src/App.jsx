@@ -1531,7 +1531,12 @@ const dailyOrderSummary = useMemo(() => {
   filteredOrdersForView.forEach((order) => {
     if (order.is_cancelled) return;
 
-    const dateKey = formatDateTime(order.created_at).slice(0, 10);
+    const dateKey = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+}).format(new Date(order.created_at));
 
     if (!summaryMap.has(dateKey)) {
       summaryMap.set(dateKey, {
