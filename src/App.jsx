@@ -438,6 +438,8 @@ const [openOverallProductCategories, setOpenOverallProductCategories] = useState
 const [showDailyOrderSummary, setShowDailyOrderSummary] = useState(false);
 const [dailySummaryPage, setDailySummaryPage] = useState(1);
 
+const [selectedDailySummary, setSelectedDailySummary] = useState(null);
+
 const DAILY_SUMMARY_PER_PAGE = 5;
 
 const [overallProductSearchTerm, setOverallProductSearchTerm] = useState("");
@@ -1569,6 +1571,23 @@ const pagedDailyOrderSummary = useMemo(() => {
     startIndex + DAILY_SUMMARY_PER_PAGE
   );
 }, [dailyOrderSummary, dailySummaryPage]);
+
+const selectedDailyOrders = useMemo(() => {
+  if (!selectedDailySummary) return [];
+
+  return filteredOrdersForView.filter((order) => {
+    if (order.is_cancelled) return false;
+
+    const orderDate = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(order.created_at));
+
+    return orderDate === selectedDailySummary.date;
+  });
+}, [selectedDailySummary, filteredOrdersForView]);
 
 const customerProductSummary = useMemo(() => {
   const productMap = new Map();
@@ -3450,7 +3469,7 @@ const formatDateTime = (value) => {
 ) : null}
 
 
-<div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+<div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
   <h2 className="text-xl font-bold text-slate-900">일자별 주문액 조회</h2>
 
   <p className="mt-2 text-sm leading-relaxed text-slate-500">
@@ -3472,15 +3491,17 @@ const formatDateTime = (value) => {
     <div className="mt-4 space-y-2">
       {pagedDailyOrderSummary.length > 0 ? (
         pagedDailyOrderSummary.map((item) => (
-          <div
-            key={item.date}
-            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-          >
+          <button
+  type="button"
+  key={item.date}
+  onClick={() => setSelectedDailySummary(item)}
+  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+>
             <div className="font-bold text-slate-900">{item.date}</div>
             <div className="mt-1 text-sm text-slate-600">
               주문 {item.orderCount}건 · {formatCurrency(item.totalAmount)}
             </div>
-          </div>
+          </button>
         ))
       ) : (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
@@ -3519,6 +3540,71 @@ const formatDateTime = (value) => {
   ) : null}
 </div>
 
+{selectedDailySummary ? (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            {selectedDailySummary.date} 주문 내역
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            총 주문 {selectedDailySummary.orderCount}건 ·{" "}
+            {formatCurrency(selectedDailySummary.totalAmount)}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelectedDailySummary(null)}
+          className="text-2xl text-slate-400 hover:text-slate-700"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="mt-5 max-h-[400px] overflow-y-auto space-y-3">
+        {selectedDailyOrders.map((order) => (
+          <div
+            key={order.id}
+            className="rounded-2xl border border-slate-200 p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-bold text-slate-900">
+                  {order.customer_name}
+                </div>
+
+                <div className="mt-1 text-sm text-slate-500">
+                  {order.order_number}
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="font-bold text-slate-900">
+                  {formatCurrency(order.total_amount || 0)}
+                </div>
+
+                <div className="mt-1 text-sm text-slate-500">
+                  {(order.items || []).length}개 품목
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setSelectedDailySummary(null)}
+        className="mt-5 w-full rounded-2xl border border-slate-300 px-4 py-3 font-bold"
+      >
+        닫기
+      </button>
+    </div>
+  </div>
+) : null}
 
 {isDeveloperMode && isDeveloperUnlocked ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
