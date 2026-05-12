@@ -79,9 +79,12 @@ export const productsA = [
   { id: 86, category: "참외·수박·멜론·딸기", name: "메론", price: 20000, unit: "판", status: "active" },
   { id: 87, category: "참외·수박·멜론·딸기", name: "딸기(40포트)", price: 40000, unit: "판", status: "active" },
 
-  { id: 90, category: "옥수수류", name: "옥수수 72구(두 알맹이씩)", price: 9000, unit: "판", status: "active" },
-  { id: 91, category: "옥수수류", name: "옥수수 105구(한 알맹이씩)", price: 9000, unit: "판", status: "active" },
-  { id: 92, category: "옥수수류", name: "옥수수 105구(두 알맹이씩)", price: 11000, unit: "판", status: "active" },
+  { id: 90, category: "옥수수류", name: "찰옥수수 72구(두 알맹이씩)", price: 9000, unit: "판", status: "active" },
+  { id: 91, category: "옥수수류", name: "찰옥수수 105구(한 알맹이씩)", price: 9000, unit: "판", status: "active" },
+  { id: 92, category: "옥수수류", name: "찰옥수수 105구(두 알맹이씩)", price: 11000, unit: "판", status: "active" },
+  { id: 93, category: "옥수수류", name: "흑찰옥수수 105구", price: 9000, unit: "판", status: "active" },
+  { id: 94, category: "옥수수류", name: "알록옥수수 105구", price: 9000, unit: "판", status: "active" },
+  
 
   { id: 99, category: "콩류", name: "강낭콩 50구", price: 12000, unit: "판", status: "active" },
   { id: 100, category: "콩류", name: "강낭콩 72구", price: 15000, unit: "판", status: "active" },
