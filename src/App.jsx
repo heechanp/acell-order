@@ -435,7 +435,10 @@ const [showOverallCustomerBreakdown, setShowOverallCustomerBreakdown] = useState
 const [showOverallProductSummary, setShowOverallProductSummary] = useState(false);
 const [openOverallProductCategories, setOpenOverallProductCategories] = useState({});
 
+const [showDailyOrderSummary, setShowDailyOrderSummary] = useState(false);
+const [dailySummaryPage, setDailySummaryPage] = useState(1);
 
+const DAILY_SUMMARY_PER_PAGE = 5;
 
 const [overallProductSearchTerm, setOverallProductSearchTerm] = useState("");
 
@@ -1183,6 +1186,9 @@ useEffect(() => {
   setCustomerProductSearchTerm("");
   setOpenCustomerProductCategories({});
   setIsCustomerProductRankingView(false);
+  
+  setShowDailyOrderSummary(false);
+setDailySummaryPage(1);
 
 }, [developerCustomerId]);
 
@@ -1519,7 +1525,45 @@ const overallProductRanking = useMemo(() => {
   });
 }, [orders, developerModeCustomerIds, overallProductSearchTerm]);
 
+const dailyOrderSummary = useMemo(() => {
+  const summaryMap = new Map();
 
+  filteredOrdersForView.forEach((order) => {
+    if (order.is_cancelled) return;
+
+    const dateKey = formatDateTime(order.created_at).slice(0, 10);
+
+    if (!summaryMap.has(dateKey)) {
+      summaryMap.set(dateKey, {
+        date: dateKey,
+        orderCount: 0,
+        totalAmount: 0,
+      });
+    }
+
+    const current = summaryMap.get(dateKey);
+    current.orderCount += 1;
+    current.totalAmount += Number(order.total_amount || 0);
+  });
+
+  return Array.from(summaryMap.values()).sort(
+    (a, b) => new Date(b.date) - new Date(a.date)
+  );
+}, [filteredOrdersForView]);
+
+const dailySummaryTotalPages = Math.max(
+  1,
+  Math.ceil(dailyOrderSummary.length / DAILY_SUMMARY_PER_PAGE)
+);
+
+const pagedDailyOrderSummary = useMemo(() => {
+  const startIndex = (dailySummaryPage - 1) * DAILY_SUMMARY_PER_PAGE;
+
+  return dailyOrderSummary.slice(
+    startIndex,
+    startIndex + DAILY_SUMMARY_PER_PAGE
+  );
+}, [dailyOrderSummary, dailySummaryPage]);
 
 const customerProductSummary = useMemo(() => {
   const productMap = new Map();
@@ -3100,6 +3144,8 @@ const formatDateTime = (value) => {
 {isDeveloperMode && isDeveloperUnlocked ? (
   <div className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mt-4">
     <div className="text-lg font-bold text-slate-900">전체 거래처 품목 집계</div>
+
+
     <p className="mt-2 text-sm text-slate-600">
       개발자 모드를 제외한 전체 거래처 기준 품목별 총 판수와 총 판매금액입니다.
     </p>
@@ -3397,6 +3443,76 @@ const formatDateTime = (value) => {
     ) : null}
   </div>
 ) : null}
+
+
+<div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 className="text-xl font-bold text-slate-900">일자별 주문액 조회</h2>
+
+  <p className="mt-2 text-sm leading-relaxed text-slate-500">
+    날짜별 주문건수와 총 주문액을 확인합니다.
+  </p>
+
+  <button
+    type="button"
+    onClick={() => {
+      setShowDailyOrderSummary((prev) => !prev);
+      setDailySummaryPage(1);
+    }}
+    className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900"
+  >
+    {showDailyOrderSummary ? "일자별 주문액 닫기" : "일자별 주문액 보기"}
+  </button>
+
+  {showDailyOrderSummary ? (
+    <div className="mt-4 space-y-2">
+      {pagedDailyOrderSummary.length > 0 ? (
+        pagedDailyOrderSummary.map((item) => (
+          <div
+            key={item.date}
+            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+          >
+            <div className="font-bold text-slate-900">{item.date}</div>
+            <div className="mt-1 text-sm text-slate-600">
+              주문 {item.orderCount}건 · {formatCurrency(item.totalAmount)}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+          표시할 주문 내역이 없습니다.
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setDailySummaryPage((prev) => Math.max(1, prev - 1))}
+          disabled={dailySummaryPage <= 1}
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40"
+        >
+          이전
+        </button>
+
+        <div className="text-sm text-slate-500">
+          {dailySummaryPage} / {dailySummaryTotalPages}
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            setDailySummaryPage((prev) =>
+              Math.min(dailySummaryTotalPages, prev + 1)
+            )
+          }
+          disabled={dailySummaryPage >= dailySummaryTotalPages}
+          className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40"
+        >
+          다음
+        </button>
+      </div>
+    </div>
+  ) : null}
+</div>
 
 
 {isDeveloperMode && isDeveloperUnlocked ? (
