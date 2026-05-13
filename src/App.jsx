@@ -1527,6 +1527,36 @@ const overallProductRanking = useMemo(() => {
   });
 }, [orders, developerModeCustomerIds, overallProductSearchTerm]);
 
+
+const getKSTDateKey = (value) => {
+  if (!value) return "";
+
+  let normalized = String(value).trim();
+
+  if (
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(normalized) &&
+    !normalized.includes("T")
+  ) {
+    normalized = normalized.replace(" ", "T") + "Z";
+  }
+
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(normalized) &&
+    !normalized.endsWith("Z") &&
+    !/[+-]\d{2}:\d{2}$/.test(normalized)
+  ) {
+    normalized = normalized + "Z";
+  }
+
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(normalized));
+};
+
+
 const dailyOrderSummary = useMemo(() => {
   const summaryMap = new Map();
 
@@ -2435,34 +2465,6 @@ const formatDateTime = (value) => {
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 };
 
-
-const getKSTDateKey = (value) => {
-  if (!value) return "";
-
-  let normalized = String(value).trim();
-
-  if (
-    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(normalized) &&
-    !normalized.includes("T")
-  ) {
-    normalized = normalized.replace(" ", "T") + "Z";
-  }
-
-  if (
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(normalized) &&
-    !normalized.endsWith("Z") &&
-    !/[+-]\d{2}:\d{2}$/.test(normalized)
-  ) {
-    normalized = normalized + "Z";
-  }
-
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(normalized));
-};
 
 
 
