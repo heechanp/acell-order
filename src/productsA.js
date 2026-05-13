@@ -104,8 +104,11 @@ export const productsA = [
   { id: 133, category: "허브·쌈채소", name: "쑥갓", price: 8000, unit: "판", status: "active" },
   { id: 134, category: "허브·쌈채소", name: "비트", price: 8000, unit: "판", status: "active" },
   { id: 135, category: "허브·쌈채소", name: "케일", price: 9000, unit: "판", status: "active" },
-  { id: 136, category: "허브·쌈채소", name: "잎들깨 105구", price: 9000, unit: "판", status: "active" },
-  { id: 137, category: "허브·쌈채소", name: "잎들깨 70~80", price: 6000, unit: "판", status: "active" },
+
+
+{ id: 136, category: "참깨·들깨류", name: "잎들깨", price: 9000, unit: "판", status: "active" },
+  { id: 137, category: "참깨·들깨류", name: "잎들깨 70~80", price: 6000, unit: "판", status: "active" },
+  { id: 138, category: "참깨·들깨류", name: "참깨 128구 (외대)", price: 8000, unit: "판", status: "active" },
 
   { id: 140, category: "가지류", name: "가지(천하대장)", price: 12000, unit: "판", status: "active" }
 ];
