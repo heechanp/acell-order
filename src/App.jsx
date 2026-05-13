@@ -1533,12 +1533,7 @@ const dailyOrderSummary = useMemo(() => {
   filteredOrdersForView.forEach((order) => {
     if (order.is_cancelled) return;
 
-    const dateKey = new Intl.DateTimeFormat("sv-SE", {
-  timeZone: "Asia/Seoul",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-}).format(new Date(order.created_at));
+    const dateKey = getKSTDateKey(order.created_at);
 
     if (!summaryMap.has(dateKey)) {
       summaryMap.set(dateKey, {
@@ -1578,12 +1573,7 @@ const selectedDailyOrders = useMemo(() => {
   return filteredOrdersForView.filter((order) => {
     if (order.is_cancelled) return false;
 
-    const orderDate = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: "Asia/Seoul",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(order.created_at));
+    const orderDate = getKSTDateKey(order.created_at);
 
     return orderDate === selectedDailySummary.date;
   });
@@ -2444,6 +2434,38 @@ const formatDateTime = (value) => {
 
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 };
+
+
+const getKSTDateKey = (value) => {
+  if (!value) return "";
+
+  let normalized = String(value).trim();
+
+  if (
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(normalized) &&
+    !normalized.includes("T")
+  ) {
+    normalized = normalized.replace(" ", "T") + "Z";
+  }
+
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(normalized) &&
+    !normalized.endsWith("Z") &&
+    !/[+-]\d{2}:\d{2}$/.test(normalized)
+  ) {
+    normalized = normalized + "Z";
+  }
+
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(normalized));
+};
+
+
+
   const downloadReceiptImage = async () => {
   if (!receiptRef.current) return;
 
