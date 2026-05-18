@@ -57,6 +57,7 @@ export const productsA = [
   { id: 60, category: "상추·엽채류", name: "적로메인", price: 9000, unit: "판", status: "active" },
   { id: 61, category: "상추·엽채류", name: "적꽃상추", price: 9000, unit: "판", status: "active" },
   { id: 62, category: "상추·엽채류", name: "오향적치마", price: 9000, unit: "판", status: "active" },
+  { id: 63, category: "상추·엽채류", name: "조선적치마", price: 9000, unit: "판", status: "active" },
   { id: 64, category: "상추·엽채류", name: "버터헤드 유럽상추", price: 10000, unit: "판", status: "active" },
   { id: 65, category: "상추·엽채류", name: "줄기상추 궁채", price: 10000, unit: "판", status: "active" },
   { id: 66, category: "상추·엽채류", name: "아바타 유럽상추", price: 10000, unit: "판", status: "active" },
