@@ -108,7 +108,6 @@ export const productsA = [
 
 
 { id: 136, category: "참깨·들깨류", name: "잎들깨", price: 9000, unit: "판", status: "active" },
-  { id: 137, category: "참깨·들깨류", name: "잎들깨 70~80", price: 6000, unit: "판", status: "active" },
   { id: 138, category: "참깨·들깨류", name: "참깨(외대)", price: 8000, unit: "판", status: "active" },
 { id: 151, category: "참깨·들깨류", name: "참깨(가지)", price: 8000, unit: "판", status: "active" },
 
