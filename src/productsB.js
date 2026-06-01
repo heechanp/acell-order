@@ -65,7 +65,8 @@ export const productsB = [
   { id: 68, category: "상추·엽채류", name: "청치커리", price: 8000, unit: "판", status: "active" },
   { id: 69, category: "상추·엽채류", name: "적겨자(갓)", price: 8000, unit: "판", status: "active" },
   { id: 70, category: "상추·엽채류", name: "적치커리", price: 8000, unit: "판", status: "active" },
-  { id: 71, category: "상추·엽채류", name: "신적생채", price: 8000, unit: "판", status: "active" },
+  { id: 71, category: "상추·엽채류", name: "적생채", price: 8000, unit: "판", status: "active" },
+  { id: 76, category: "상추·엽채류", name: "청생채", price: 8000, unit: "판", status: "active" },
   { id: 72, category: "상추·엽채류", name: "진빨롤라 상추", price: 8000, unit: "판", status: "active" },
   { id: 73, category: "상추·엽채류", name: "청치마상추", price: 8000, unit: "판", status: "active" },
   { id: 74, category: "상추·엽채류", name: "오크린 상추", price: 8000, unit: "판", status: "active" },
@@ -111,6 +112,7 @@ export const productsB = [
   { id: 136, category: "참깨·들깨류", name: "잎들깨", price: 8000, unit: "판", status: "active" },
   { id: 138, category: "참깨·들깨류", name: "참깨(외대)", price: 8000, unit: "판", status: "active" },
   { id: 151, category: "참깨·들깨류", name: "참깨(가지)", price: 8000, unit: "판", status: "active" },
+  { id: 152, category: "참깨·들깨류", name: "흑참깨", price: 8000, unit: "판", status: "active" },
 
 
   { id: 140, category: "가지류", name: "가지(천하대장)", price: 12000, unit: "판", status: "active" }
