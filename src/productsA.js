@@ -108,7 +108,8 @@ export const productsA = [
   { id: 135, category: "허브·쌈채소", name: "케일", price: 9000, unit: "판", status: "active" },
 
 
-{ id: 136, category: "참깨·들깨류", name: "잎들깨", price: 9000, unit: "판", status: "active" },
+{ id: 136, category: "참깨·들깨류", name: "잎들깨", price: 8000, unit: "판", status: "active" },
+{ id: 137, category: "참깨·들깨류", name: "열매들깨", price: 8000, unit: "판", status: "active" },
   { id: 138, category: "참깨·들깨류", name: "참깨(외대)", price: 8000, unit: "판", status: "active" },
 { id: 151, category: "참깨·들깨류", name: "참깨(가지)", price: 8000, unit: "판", status: "active" },
 { id: 152, category: "참깨·들깨류", name: "흑참깨", price: 8000, unit: "판", status: "active" },
