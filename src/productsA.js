@@ -55,6 +55,7 @@ export const productsA = [
   { id: 59, category: "토마토류", name: "일반 방울토마토", price: 16000, unit: "판", status: "active" },
 
   { id: 60, category: "상추·엽채류", name: "적로메인", price: 9000, unit: "판", status: "active" },
+    { id: 76, category: "상추·엽채류", name: "청로메인", price: 9000, unit: "판", status: "active" },
   { id: 61, category: "상추·엽채류", name: "적꽃상추", price: 9000, unit: "판", status: "active" },
   { id: 62, category: "상추·엽채류", name: "조선적치마", price: 9000, unit: "판", status: "active" },
   { id: 63, category: "상추·엽채류", name: "일반적치마", price: 9000, unit: "판", status: "active" },
@@ -71,6 +72,7 @@ export const productsA = [
   { id: 73, category: "상추·엽채류", name: "청치마상추", price: 9000, unit: "판", status: "active" },
   { id: 74, category: "상추·엽채류", name: "오크린 상추", price: 9000, unit: "판", status: "active" },
   { id: 75, category: "상추·엽채류", name: "양상추", price: 9000, unit: "판", status: "active" },
+  { id: 77, category: "상추·엽채류", name: "미나리 40포트", price: 24000, unit: "판", status: "active" },
 
   { id: 80, category: "참외·수박·멜론·딸기", name: "망고참외", price: 35000, unit: "판", status: "active" },
   { id: 81, category: "참외·수박·멜론·딸기", name: "일반참외", price: 12000, unit: "판", status: "active" },

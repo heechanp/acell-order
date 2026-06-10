@@ -71,6 +71,7 @@ export const productsB = [
   { id: 73, category: "상추·엽채류", name: "청치마상추", price: 8000, unit: "판", status: "active" },
   { id: 74, category: "상추·엽채류", name: "오크린 상추", price: 8000, unit: "판", status: "active" },
   { id: 75, category: "상추·엽채류", name: "양상추", price: 8000, unit: "판", status: "active" },
+  { id: 77, category: "상추·엽채류", name: "미나리 40포트", price: 24000, unit: "판", status: "active" },
 
   { id: 80, category: "참외·수박·멜론·딸기", name: "망고참외", price: 35000, unit: "판", status: "active" },
   { id: 81, category: "참외·수박·멜론·딸기", name: "일반참외", price: 12000, unit: "판", status: "active" },
