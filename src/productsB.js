@@ -89,8 +89,8 @@ export const productsB = [
   { id: 94, category: "옥수수류", name: "알록옥수수 105구", price: 8000, unit: "판", status: "active" },
 
 
-  { id: 97, category: "콩류", name: "서리태 검정콩", price: 10000, unit: "판", status: "active" },
-  { id: 98, category: "콩류", name: "선풍(백태)", price: 10000, unit: "판", status: "active" },
+  { id: 97, category: "콩류", name: "서리태 검정콩", price: 8000, unit: "판", status: "active" },
+  { id: 98, category: "콩류", name: "선풍(백태)", price: 8000, unit: "판", status: "active" },
   { id: 99, category: "콩류", name: "강낭콩 50구", price: 12000, unit: "판", status: "active" },
   { id: 100, category: "콩류", name: "강낭콩 72구", price: 15000, unit: "판", status: "active" },
   { id: 101, category: "콩류", name: "작두콩", price: 20000, unit: "판", status: "active" },
