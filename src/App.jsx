@@ -1084,42 +1084,64 @@ const target = pdfOrderStatementRef.current;
             "FAST"
           );
         } else {
-          // 긴 명세서는 여러 페이지로 나눠 저장
-          let remainingHeight = imageHeight;
-          let position = margin;
+  // 긴 명세서를 페이지별 이미지로 잘라서 저장
+  const sourcePageHeight =
+    Math.floor((printableHeight / printableWidth) * image.width);
 
-          pdf.addImage(
-            dataUrl,
-            "PNG",
-            margin,
-            position,
-            printableWidth,
-            imageHeight,
-            undefined,
-            "FAST"
-          );
+  let sourceY = 0;
+  let pageIndex = 0;
 
-          remainingHeight -= printableHeight;
+  while (sourceY < image.height) {
+    if (pageIndex > 0) {
+      pdf.addPage();
+    }
 
-          while (remainingHeight > 0) {
-            pdf.addPage();
+    const currentSliceHeight = Math.min(
+      sourcePageHeight,
+      image.height - sourceY
+    );
 
-            position = margin - (imageHeight - remainingHeight);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
 
-            pdf.addImage(
-              dataUrl,
-              "PNG",
-              margin,
-              position,
-              printableWidth,
-              imageHeight,
-              undefined,
-              "FAST"
-            );
+    canvas.width = image.width;
+    canvas.height = currentSliceHeight;
 
-            remainingHeight -= printableHeight;
-          }
-        }
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.drawImage(
+      image,
+      0,
+      sourceY,
+      image.width,
+      currentSliceHeight,
+      0,
+      0,
+      image.width,
+      currentSliceHeight
+    );
+
+    const pageDataUrl = canvas.toDataURL("image/png");
+
+    const renderedHeight =
+      (currentSliceHeight * printableWidth) / image.width;
+
+    pdf.addImage(
+      pageDataUrl,
+      "PNG",
+      margin,
+      margin,
+      printableWidth,
+      renderedHeight,
+      undefined,
+      "FAST"
+    );
+
+    sourceY += currentSliceHeight;
+    pageIndex += 1;
+  }
+}
 
         const customerName =
           selectedOrder.customer_name || "거래처";
