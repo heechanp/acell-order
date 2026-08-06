@@ -1179,7 +1179,7 @@ const handleDownloadSelectedOrderPdf = async () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
-  const [isDownloadingOrderPdf, setIsDownloadingOrderPdf] = useState(false);
+  
   const receiptRef = useRef(null);
   const [orders, setOrders] = useState([]);
 const [payments, setPayments] = useState([]);
