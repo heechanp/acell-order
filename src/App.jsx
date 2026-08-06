@@ -4341,12 +4341,12 @@ const formatDateTime = (value) => {
 
       <table
         style={{
-          width: "100%",
-          marginTop: "24px",
-          borderCollapse: "collapse",
-          tableLayout: "fixed",
-          fontSize: "16px",
-        }}
+  width: "100%",
+  marginTop: "24px",
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
+  fontSize: "14px",
+}}
       >
         <thead>
           <tr>
@@ -4379,8 +4379,7 @@ const formatDateTime = (value) => {
                   textAlign: "center",
                 }}
               >
-                {Number(item.quantity || 0)}
-                {item.unit || "판"}
+                {Number(item.quantity || 0)} {item.unit || "판"}
               </td>
 
               <td
@@ -4397,30 +4396,46 @@ const formatDateTime = (value) => {
       </table>
 
       <div
-        style={{
-          marginTop: "28px",
-          fontSize: "19px",
-          fontWeight: 700,
-        }}
-      >
-        총 판수:{" "}
-        {(selectedOrder.items || []).reduce(
-          (sum, item) => sum + Number(item.quantity || 0),
-          0
-        )}
-        판
-      </div>
+  style={{
+    marginTop: "24px",
+    paddingTop: "18px",
+    borderTop: "1px solid #d1d5db",
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: "16px",
+    }}
+  >
+    <span>총 판수</span>
 
-      <div
-        style={{
-          marginTop: "22px",
-          fontSize: "23px",
-          fontWeight: 800,
-        }}
-      >
-        총 주문금액:{" "}
-        {formatCurrency(selectedOrder.total_amount || 0)}
-      </div>
+    <strong>
+      {(selectedOrder.items || []).reduce(
+        (sum, item) => sum + Number(item.quantity || 0),
+        0
+      )}
+      판
+    </strong>
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      marginTop: "12px",
+      fontSize: "20px",
+      fontWeight: 800,
+    }}
+  >
+    <span>총 주문금액</span>
+
+    <span>
+      {formatCurrency(selectedOrder.total_amount || 0)}
+    </span>
+  </div>
+</div>
 
       {selectedOrder.memo ? (
         <div
