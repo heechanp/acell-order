@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 import { productsA } from "./productsA";
 import { productsB } from "./productsB";
+
+
 
 // 배포 전 설정값
 // Vercel/로컬에서 실제 사용할 때 아래 두 값을 실제 값으로 바꿔주세요.
@@ -998,6 +1001,148 @@ const handleDeleteSelectedOrder = async () => {
   }
 };
 
+const handleDownloadSelectedOrderPdf = async () => {
+  if (!selectedOrder) {
+    alert("다운로드할 주문 명세서를 선택해주세요.");
+    return;
+  }
+
+  const target = selectedOrderDetailRef.current;
+
+  if (!target) {
+    alert("명세서 영역을 찾을 수 없습니다.");
+    return;
+  }
+
+  try {
+    setIsDownloadingOrderPdf(true);
+
+    // 웹폰트가 로딩될 때까지 기다림
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    const dataUrl = await toPng(target, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+
+      // data-pdf-exclude가 붙은 영역은 PDF에서 제외
+      filter: (node) => {
+        if (!(node instanceof HTMLElement)) return true;
+        return !node.hasAttribute("data-pdf-exclude");
+      },
+    });
+
+    const image = new Image();
+
+    image.onload = () => {
+      try {
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const margin = 10;
+        const printableWidth = pageWidth - margin * 2;
+        const printableHeight = pageHeight - margin * 2;
+
+        const imageHeight =
+          (image.height * printableWidth) / image.width;
+
+        // 이미지가 A4 한 장 이내인 경우
+        if (imageHeight <= printableHeight) {
+          pdf.addImage(
+            dataUrl,
+            "PNG",
+            margin,
+            margin,
+            printableWidth,
+            imageHeight,
+            undefined,
+            "FAST"
+          );
+        } else {
+          // 긴 명세서는 여러 페이지로 나눠 저장
+          let remainingHeight = imageHeight;
+          let position = margin;
+
+          pdf.addImage(
+            dataUrl,
+            "PNG",
+            margin,
+            position,
+            printableWidth,
+            imageHeight,
+            undefined,
+            "FAST"
+          );
+
+          remainingHeight -= printableHeight;
+
+          while (remainingHeight > 0) {
+            pdf.addPage();
+
+            position = margin - (imageHeight - remainingHeight);
+
+            pdf.addImage(
+              dataUrl,
+              "PNG",
+              margin,
+              position,
+              printableWidth,
+              imageHeight,
+              undefined,
+              "FAST"
+            );
+
+            remainingHeight -= printableHeight;
+          }
+        }
+
+        const customerName =
+          selectedOrder.customer_name || "거래처";
+
+        const orderNumber =
+          selectedOrder.order_number || selectedOrder.id || "주문";
+
+        const safeCustomerName = String(customerName).replace(
+          /[\\/:*?"<>|]/g,
+          "_"
+        );
+
+        const safeOrderNumber = String(orderNumber).replace(
+          /[\\/:*?"<>|]/g,
+          "_"
+        );
+
+        pdf.save(
+          `${safeCustomerName}_${safeOrderNumber}_명세서.pdf`
+        );
+      } catch (error) {
+        console.error("PDF 생성 실패:", error);
+        alert("PDF 생성에 실패했습니다.");
+      } finally {
+        setIsDownloadingOrderPdf(false);
+      }
+    };
+
+    image.onerror = () => {
+      setIsDownloadingOrderPdf(false);
+      alert("명세서 이미지 생성에 실패했습니다.");
+    };
+
+    image.src = dataUrl;
+  } catch (error) {
+    console.error("명세서 PDF 다운로드 실패:", error);
+    alert("명세서 PDF 다운로드에 실패했습니다.");
+    setIsDownloadingOrderPdf(false);
+  }
+};
 
   const [openCategories, setOpenCategories] = useState({
     "고추류": false,
@@ -1032,6 +1177,7 @@ const handleDeleteSelectedOrder = async () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [isDownloadingImage, setIsDownloadingImage] = useState(false);
+  const [isDownloadingOrderPdf, setIsDownloadingOrderPdf] = useState(false);
   const receiptRef = useRef(null);
   const [orders, setOrders] = useState([]);
 const [payments, setPayments] = useState([]);
@@ -3791,6 +3937,20 @@ const formatDateTime = (value) => {
     <div className="mt-2 text-sm text-slate-500">
       주문일시: {formatDateTime(selectedOrder.created_at)}
     </div>
+
+<div data-pdf-exclude className="mt-3">
+  <button
+    type="button"
+    onClick={handleDownloadSelectedOrderPdf}
+    disabled={isDownloadingOrderPdf}
+    className="w-full rounded-2xl border border-emerald-500 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition active:scale-[0.99] disabled:opacity-60"
+  >
+    {isDownloadingOrderPdf
+      ? "명세서 생성 중..."
+      : "명세서 다운"}
+  </button>
+</div>
+
 
     {isSelectedOrderPaymentDone ? (
   <div className="mt-1 text-xs font-semibold text-emerald-600">
