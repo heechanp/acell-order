@@ -1024,7 +1024,7 @@ const handleDownloadSelectedOrderPdf = async () => {
     return;
   }
 
-  const target = selectedOrderDetailRef.current;
+const target = pdfOrderStatementRef.current;
 
   if (!target) {
     alert("명세서 영역을 찾을 수 없습니다.");
