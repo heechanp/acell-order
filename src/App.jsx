@@ -4461,6 +4461,9 @@ const formatDateTime = (value) => {
       {formatCurrency(selectedOrder.total_amount || 0)}
     </span>
   </div>
+  
+  <div style={{ height: "120px" }} />
+
 </div>
 
       {selectedOrder.memo ? (
