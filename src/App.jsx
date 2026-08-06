@@ -458,8 +458,10 @@ const [receiptTotalPaid, setReceiptTotalPaid] = useState(0);
 const [receiptTotalOrdered, setReceiptTotalOrdered] = useState(0);
 
 const settlementSummaryRef = useRef(null);
-
 const selectedOrderDetailRef = useRef(null);
+
+const pdfOrderStatementRef = useRef(null);
+const [isDownloadingOrderPdf, setIsDownloadingOrderPdf] = useState(false);
 
 const toggleCustomerProductCategory = (category) => {
   setOpenCustomerProductCategories((prev) => ({
@@ -4270,6 +4272,160 @@ const formatDateTime = (value) => {
 ) : null}
 
 
+  </div>
+) : null}
+
+{selectedOrder ? (
+  <div
+    style={{
+      position: "fixed",
+      left: "-10000px",
+      top: 0,
+      width: "794px",
+      backgroundColor: "#ffffff",
+      padding: "56px 60px",
+      color: "#111827",
+      fontFamily:
+        'Pretendard, "Noto Sans KR", Arial, sans-serif',
+    }}
+  >
+    <div ref={pdfOrderStatementRef}>
+      <h1
+        style={{
+          margin: 0,
+          fontSize: "30px",
+          fontWeight: 800,
+          lineHeight: 1.3,
+        }}
+      >
+        주문 명세서
+      </h1>
+
+      <div
+        style={{
+          marginTop: "34px",
+          fontSize: "17px",
+          lineHeight: 1.8,
+        }}
+      >
+        <div>
+          <strong>거래처:</strong>{" "}
+          {selectedOrder.customer_name || "-"}
+        </div>
+
+        <div>
+          <strong>주문번호:</strong>{" "}
+          {selectedOrder.order_number || "-"}
+        </div>
+
+        <div>
+          <strong>주문일시:</strong>{" "}
+          {formatDateTime(selectedOrder.created_at)}
+        </div>
+      </div>
+
+      <table
+        style={{
+          width: "100%",
+          marginTop: "24px",
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+          fontSize: "16px",
+        }}
+      >
+        <thead>
+          <tr>
+            <th style={pdfTableHeaderStyle}>품목</th>
+            <th style={pdfTableHeaderStyle}>단가</th>
+            <th style={pdfTableHeaderStyle}>수량</th>
+            <th style={pdfTableHeaderStyle}>금액</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {(selectedOrder.items || []).map((item, index) => (
+            <tr key={`${selectedOrder.id}-pdf-${index}`}>
+              <td style={pdfTableCellStyle}>
+                {item.name || "-"}
+              </td>
+
+              <td
+                style={{
+                  ...pdfTableCellStyle,
+                  textAlign: "right",
+                }}
+              >
+                {formatCurrency(item.unit_price || 0)}
+              </td>
+
+              <td
+                style={{
+                  ...pdfTableCellStyle,
+                  textAlign: "center",
+                }}
+              >
+                {Number(item.quantity || 0)}
+                {item.unit || "판"}
+              </td>
+
+              <td
+                style={{
+                  ...pdfTableCellStyle,
+                  textAlign: "right",
+                }}
+              >
+                {formatCurrency(item.amount || 0)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div
+        style={{
+          marginTop: "28px",
+          fontSize: "19px",
+          fontWeight: 700,
+        }}
+      >
+        총 판수:{" "}
+        {(selectedOrder.items || []).reduce(
+          (sum, item) => sum + Number(item.quantity || 0),
+          0
+        )}
+        판
+      </div>
+
+      <div
+        style={{
+          marginTop: "22px",
+          fontSize: "23px",
+          fontWeight: 800,
+        }}
+      >
+        총 주문금액:{" "}
+        {formatCurrency(selectedOrder.total_amount || 0)}
+      </div>
+
+      {selectedOrder.memo ? (
+        <div
+          style={{
+            marginTop: "28px",
+            padding: "18px",
+            backgroundColor: "#f8fafc",
+            border: "1px solid #e5e7eb",
+            fontSize: "15px",
+            lineHeight: 1.6,
+          }}
+        >
+          <strong>메모</strong>
+
+          <div style={{ marginTop: "8px" }}>
+            {selectedOrder.memo}
+          </div>
+        </div>
+      ) : null}
+    </div>
   </div>
 ) : null}
 
