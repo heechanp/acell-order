@@ -1086,7 +1086,7 @@ const target = pdfOrderStatementRef.current;
         } else {
   // 긴 명세서를 페이지별 이미지로 잘라서 저장
   const sourcePageHeight =
-  Math.floor((printableHeight / printableWidth) * image.width) - 50;
+  Math.floor((printableHeight / printableWidth) * image.width) - 100;
 
   let sourceY = 0;
   let pageIndex = 0;
@@ -4422,8 +4422,12 @@ const formatDateTime = (value) => {
     marginTop: "24px",
     paddingTop: "18px",
     borderTop: "1px solid #d1d5db",
+     breakInside: "avoid",
+    pageBreakInside: "avoid",
   }}
 >
+
+  
   <div
     style={{
       display: "flex",
