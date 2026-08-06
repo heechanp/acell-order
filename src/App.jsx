@@ -463,6 +463,21 @@ const selectedOrderDetailRef = useRef(null);
 const pdfOrderStatementRef = useRef(null);
 const [isDownloadingOrderPdf, setIsDownloadingOrderPdf] = useState(false);
 
+const pdfTableHeaderStyle = {
+  border: "1px solid #d1d5db",
+  backgroundColor: "#f3f4f6",
+  padding: "15px 12px",
+  fontWeight: 700,
+  textAlign: "center",
+};
+
+const pdfTableCellStyle = {
+  border: "1px solid #d1d5db",
+  padding: "15px 12px",
+  verticalAlign: "middle",
+  wordBreak: "keep-all",
+};
+
 const toggleCustomerProductCategory = (category) => {
   setOpenCustomerProductCategories((prev) => ({
     ...prev,
