@@ -1086,7 +1086,7 @@ const target = pdfOrderStatementRef.current;
         } else {
   // 긴 명세서를 페이지별 이미지로 잘라서 저장
   const sourcePageHeight =
-    Math.floor((printableHeight / printableWidth) * image.width);
+  Math.floor((printableHeight / printableWidth) * image.width) - 50;
 
   let sourceY = 0;
   let pageIndex = 0;
